@@ -77,7 +77,7 @@ DOODLE_MAP = {
     'bubble': ['think', 'thinking', 'thought', 'thoughts', 'say', 'saying', 'speak', 'words', 'tell', 'whisper'],
     'box': ['name', 'title', 'brand', 'label', 'tag', 'number', 'one', 'best', 'legend'],
     'circle': ['all', 'everything', 'world', 'whole', 'complete', 'around'],
-    'arrow': ['point', 'pointing', 'straight', 'direct', 'direction', 'target', 'aim', 'arrow']
+    'arrow': ['you', 'me', 'her', 'him', 'them', 'there', 'here', 'point', 'straight', 'direct']
 }
 
 # Genre & Energy Profiles for Intelligent Typographic Styling
@@ -94,15 +94,7 @@ STOP_WORDS = {
     'a', 'an', 'the', 'and', 'or', 'but', 'if', 'in', 'on', 'at', 'to', 'for', 'with', 'by',
     'about', 'as', 'into', 'like', 'through', 'after', 'over', 'between', 'out', 'against',
     'during', 'without', 'before', 'under', 'around', 'among', 'is', 'am', 'are', 'was', 'were',
-    'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing',
-    'that', 'this', 'these', 'those', 'it', 'its', 'i', 'me', 'my', 'myself', 'we', 'us', 'our', 'ours',
-    'you', 'your', 'yours', 'yourself', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself',
-    'they', 'them', 'their', 'theirs', 'what', 'which', 'who', 'whom', 'whose', 'where', 'when', 'why', 'how',
-    'would', 'should', 'could', 'can', 'will', 'shall', 'may', 'might', 'must', 'ought',
-    'just', 'now', 'then', 'so', 'too', 'very', 'than', 'more', 'most', 'some', 'any', 'all', 'both', 'each',
-    'no', 'nor', 'not', 'only', 'own', 'same', 'such', 'oh', 'yeah', 'ooh', 'ah', 'la', 'na', 'hey', 'whoa',
-    'im', 'youre', 'hes', 'shes', 'its', 'were', 'theyre', 'ive', 'youve', 'weve', 'theyve',
-    'dont', 'doesnt', 'didnt', 'wont', 'wouldnt', 'cant', 'couldnt', 'isnt', 'arent', 'wasnt', 'werent'
+    'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'that', 'this', 'it'
 }
 
 class LyricDirector:
@@ -220,52 +212,41 @@ class LyricDirector:
 
         self.last_doodle = detected_doodle
 
-        # 3. Typographic Hierarchy (Vibrant Semantic Hero Word Selection)
+        # 3. Typographic Hierarchy (Focal Word Selection with Balanced Length Splitting)
         focal_index = -1
         max_score = -9999.0
 
         for idx, w in enumerate(words):
             clean_w = re.sub(r'[^\w]', '', w).lower()
-            if w.lower() in ["i'll", "you'll", "we'll", "they'll", "he'll", "she'll"]:
-                clean_w = "will"
-            if clean_w in STOP_WORDS and len(words) > 1:
+            if clean_w in STOP_WORDS and len(words) > 3:
                 continue
             
-            # Base content score by word length & semantic richness
-            score = len(clean_w) * 2.5
-            
-            # Massive bonus for semantic doodle matches (brings the visual storyboard alive!)
-            if detected_doodle != "NONE" and clean_w in DOODLE_MAP.get(detected_doodle.lower(), []):
-                score += 40.0
-            
-            # High bonus for motion metaphor matches
+            score = len(clean_w) * 1.5
             if detected_metaphor != "NORMAL" and clean_w in METAPHORS.get(detected_metaphor.lower(), []):
-                score += 25.0
-            
-            # Proper nouns / Capitalized content words (e.g. California, Miami)
-            if w[0].isupper() and len(clean_w) > 2 and idx > 0:
-                score += 20.0
-            elif w.isupper() and len(clean_w) > 1:
                 score += 15.0
+            if detected_doodle != "NONE" and clean_w in DOODLE_MAP.get(detected_doodle.lower(), []):
+                score += 20.0
+            if w.isupper() and len(clean_w) > 1:
+                score += 10.0
             
-            # Gentle balance tie-breaker (+2.0 max, never overrides real semantic words)
+            # Line length balancing: heavily penalize unbalanced splits where prefix or suffix exceeds 20 characters!
+            prefix_cand = " ".join(words[:idx])
+            suffix_cand = " ".join(words[idx + 1:])
+            if len(prefix_cand) > 20:
+                score -= (len(prefix_cand) - 20) * 3.0
+            if len(suffix_cand) > 20:
+                score -= (len(suffix_cand) - 20) * 3.0
+            
+            # Central balance bonus (rewards words near middle so lines split evenly)
             center_ratio = 1.0 - (abs(idx - (len(words) - 1) / 2.0) / max(1, (len(words) - 1) / 2.0))
-            score += center_ratio * 2.0
+            score += center_ratio * 12.0
 
             if score > max_score:
                 max_score = score
                 focal_index = idx
 
-        # Fallback if all words were stop words (e.g. "All I am is"):
         if focal_index == -1:
-            longest_len = 0
-            for idx, w in enumerate(words):
-                clean_w = re.sub(r'[^\w]', '', w)
-                if len(clean_w) > longest_len:
-                    longest_len = len(clean_w)
-                    focal_index = idx
-            if focal_index == -1:
-                focal_index = len(words) // 2
+            focal_index = len(words) // 2
 
         focal_word = words[focal_index] if 0 <= focal_index < len(words) else ""
         prefix_words = words[:focal_index]
