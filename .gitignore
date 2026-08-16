@@ -1,0 +1,20 @@
+# PlatformIO & Build artifacts
+.pio/
+.vscode/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+venv/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Stray local directory
+LyricCast-ESP32/

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Music Device Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #e0e5ec;
+            --text-color: #4a5568;
+            --accent-color: #4299e1;
+            --shadow-light: rgba(255, 255, 255, 0.7);
+            --shadow-dark: rgba(163, 177, 198, 0.6);
+            --shadow-accent: rgba(66, 153, 225, 0.4);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin: 0;
+            font-weight: 700;
+            color: #2d3748;
+            text-shadow: 2px 2px 4px var(--shadow-dark), -2px -2px 4px var(--shadow-light);
+        }
+
+        /* Neumorphic Tab Bar */
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            background: var(--bg-color);
+            border-radius: 15px;
+            padding: 0.5rem;
+            box-shadow: inset 5px 5px 10px var(--shadow-dark),
+                        inset -5px -5px 10px var(--shadow-light);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.75rem 0;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--bg-color);
+            color: var(--accent-color);
+            box-shadow: 5px 5px 10px var(--shadow-dark),
+                        -5px -5px 10px var(--shadow-light);
+        }
+
+        /* Card container */
+        .card {
+            background: var(--bg-color);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 9px 9px 16px var(--shadow-dark),
+                        -9px -9px 16px var(--shadow-light);
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .card.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: #2d3748;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+            box-shadow: inset 5px 5px 10px var(--shadow-dark),
+                        inset -5px -5px 10px var(--shadow-light);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark),
+                        inset -3px -3px 6px var(--shadow-light);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 12px;
+            background: var(--bg-color);
+            border-radius: 10px;
+            box-shadow: inset 3px 3px 6px var(--shadow-dark),
+                        inset -3px -3px 6px var(--shadow-light);
+            outline: none;
+            margin: 1rem 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bg-color);
+            cursor: pointer;
+            box-shadow: 3px 3px 6px var(--shadow-dark),
+                        -3px -3px 6px var(--shadow-light);
+        }
+
+        /* File Upload */
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 1rem;
+            text-align: center;
+            background: var(--bg-color);
+            border-radius: 12px;
+            font-weight: 500;
+            color: var(--accent-color);
+            box-shadow: 5px 5px 10px var(--shadow-dark),
+                        -5px -5px 10px var(--shadow-light);
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover .file-upload-label {
+            box-shadow: 3px 3px 6px var(--shadow-dark),
+                        -3px -3px 6px var(--shadow-light);
+        }
+
+        /* Buttons */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--bg-color);
+            color: var(--accent-color);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 7px 7px 14px var(--shadow-dark),
+                        -7px -7px 14px var(--shadow-light);
+            transition: all 0.2s ease;
+        }
+
+        .btn:active {
+            box-shadow: inset 4px 4px 8px var(--shadow-dark),
+                        inset -4px -4px 8px var(--shadow-light);
+            color: #2b6cb0;
+        }
+        
+        .btn-danger {
+            color: #e53e3e;
+        }
+        .btn-danger:active {
+            color: #c53030;
+        }
+
+        /* Storage Progress */
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background: var(--bg-color);
+            border-radius: 10px;
+            margin-top: 0.5rem;
+            box-shadow: inset 3px 3px 6px var(--shadow-dark),
+                        inset -3px -3px 6px var(--shadow-light);
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-color);
+            width: 45%;
+            border-radius: 10px;
+        }
+
+        .storage-text {
+            font-size: 0.8rem;
+            text-align: right;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        .file-list {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            box-shadow: inset 3px 3px 6px var(--shadow-dark),
+                        inset -3px -3px 6px var(--shadow-light);
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(163, 177, 198, 0.3);
+            font-size: 0.9rem;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .delete-icon {
+            color: #e53e3e;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Radio Toggle for Logo */
+        .logo-toggle {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .logo-option {
+            flex: 1;
+            text-align: center;
+        }
+
+        .logo-option input {
+            display: none;
+        }
+
+        .logo-option label {
+            display: block;
+            padding: 1rem;
+            border-radius: 12px;
+            background: var(--bg-color);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.2rem;
+            box-shadow: 5px 5px 10px var(--shadow-dark),
+                        -5px -5px 10px var(--shadow-light);
+            transition: all 0.3s ease;
+        }
+
+        .logo-option input:checked + label {
+            box-shadow: inset 4px 4px 8px var(--shadow-dark),
+                        inset -4px -4px 8px var(--shadow-light);
+            color: var(--accent-color);
+        }
+
+        /* Toggle Switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-color);
+            border-radius: 34px;
+            box-shadow: inset 3px 3px 6px var(--shadow-dark),
+                        inset -3px -3px 6px var(--shadow-light);
+            transition: .4s;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: var(--text-color);
+            border-radius: 50%;
+            transition: .4s;
+            box-shadow: 2px 2px 5px var(--shadow-dark);
+        }
+        input:checked + .slider {
+            background-color: var(--accent-color);
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: #fff;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-color);
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            box-shadow: 5px 5px 15px var(--shadow-dark),
+                        -5px -5px 15px var(--shadow-light);
+            font-weight: 600;
+            color: var(--accent-color);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            opacity: 0;
+        }
+
+        .notification.show {
+            bottom: 30px;
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div id="live-logo" style="font-size: 3rem; margin-bottom: 0.5rem; color: var(--accent-color); text-shadow: 2px 2px 4px var(--shadow-dark), -2px -2px 4px var(--shadow-light);">♫</div>
+        <h1>Music Device Settings</h1>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('display')">Display</button>
+        <button class="tab-btn" onclick="switchTab('storage')">Storage</button>
+        <button class="tab-btn" onclick="switchTab('network')">Network</button>
+        <button class="tab-btn" onclick="switchTab('system')">System</button>
+    </div>
+
+    <!-- Display Settings Tab -->
+    <div id="display" class="card active">
+        <h2 class="card-title">Display & UI Settings</h2>
+        
+        <div class="form-group">
+            <div class="switch-container">
+                <div>
+                    <label style="margin-bottom: 0.2rem;">Watch Mode (Lyrics Only)</label>
+                    <span style="font-size: 0.75rem; color: #718096;">Hide UI when smartwatch is connected</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="watch-mode">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Caption Mode</label>
+            <select id="caption-mode-select">
+                <option value="normal">Normal (Sentence by Sentence)</option>
+                <option value="sliding">Sliding Rectangle Box (Karaoke)</option>
+                <option value="giant">Giant Word-for-Word</option>
+                <option value="kinetic">Kinetic V1 (Cotodama Style)</option>
+                <option value="kinetic2">Kinetic V2 (Cotodama Parallax ✦)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Startup Logo</label>
+            <div class="logo-toggle">
+                <div class="logo-option">
+                    <input type="radio" name="logo" id="logo-dots" value="dots">
+                    <label for="logo-dots">. . .</label>
+                </div>
+                <div class="logo-option">
+                    <input type="radio" name="logo" id="logo-music" value="music" checked>
+                    <label for="logo-music">♫ Note</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>UI Scaling / Size</label>
+            <input type="range" id="ui-scale" min="50" max="150" value="100">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#718096;">
+                <span>Small</span>
+                <span>Normal</span>
+                <span>Large</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Active Font</label>
+            <select id="font-select">
+                <option value="default">System Default</option>
+                <option value="pixel">Pixelated (Retro)</option>
+                <option value="smooth">Smooth Rounded</option>
+            </select>
+        </div>
+
+        <button class="btn" onclick="saveSettings()">Save Display Settings</button>
+    </div>
+
+    <!-- Storage & Languages Tab -->
+    <div id="storage" class="card">
+        <h2 class="card-title">Storage & Language Packs</h2>
+        
+        <div class="form-group">
+            <label>SPIFFS Storage (1.2 MB / 2.0 MB)</label>
+            <div class="progress-bar-container">
+                <div class="progress-bar" style="width: 60%;"></div>
+            </div>
+            <div class="storage-text">60% Used</div>
+        </div>
+
+        <div class="form-group">
+            <label>Upload Language Pack (.json)</label>
+            <div class="file-upload">
+                <input type="file" id="lang-upload" accept=".json">
+                <span class="file-upload-label">Choose File...</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Installed Files</label>
+            <div class="file-list">
+                <div class="file-item">
+                    <span>lang_en.json (12 KB)</span>
+                    <span class="delete-icon" onclick="deleteFile(this)">×</span>
+                </div>
+                <div class="file-item">
+                    <span>lang_jp.json (18 KB)</span>
+                    <span class="delete-icon" onclick="deleteFile(this)">×</span>
+                </div>
+                <div class="file-item">
+                    <span>pixel_font.bin (45 KB)</span>
+                    <span class="delete-icon" onclick="deleteFile(this)">×</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Tab -->
+    <div id="network" class="card">
+        <h2 class="card-title">Wi-Fi Setup</h2>
+        <div class="form-group">
+            <label>Network Name (SSID)</label>
+            <input type="text" id="ssid" placeholder="e.g. Home_Network">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+        <button class="btn" onclick="saveSettings()">Connect to Wi-Fi</button>
+    </div>
+
+    <!-- System Tab -->
+    <div id="system" class="card">
+        <h2 class="card-title">System Management</h2>
+        
+        <div class="form-group">
+            <div id="usb-status" style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #48bb78;">Python Backend Connected</div>
+        </div>
+
+        <div class="form-group">
+            <label>Device Name</label>
+            <input type="text" id="deviceName" value="ESP32-Music-Box">
+        </div>
+        <button class="btn" onclick="saveSettings()" style="margin-bottom: 1.5rem;">Save System Settings</button>
+        <button class="btn btn-danger" onclick="rebootDevice()">Reboot Device</button>
+    </div>
+
+</div>
+
+<!-- Notification Popup -->
+<div id="notification" class="notification">Settings Saved!</div>
+
+<script>
+    // Tab Switching Logic
+    function switchTab(tabId) {
+        // Remove active class from all tabs and cards
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding card
+        event.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    // HTTP API Integration
+    async function saveSettings() {
+        const settings = {
+            watchMode: document.getElementById('watch-mode').checked,
+            captionMode: document.getElementById('caption-mode-select').value,
+            logo: document.querySelector('input[name="logo"]:checked').value,
+            uiScale: document.getElementById('ui-scale').value,
+            font: document.getElementById('font-select').value
+        };
+
+        try {
+            await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+            showNotification("Settings Pushed via Python!");
+        } catch (e) {
+            console.error(e);
+            showNotification("Error communicating with Python!");
+        }
+    }
+
+    // Mock Delete Function
+    function deleteFile(element) {
+        if(confirm("Are you sure you want to delete this file?")) {
+            element.parentElement.style.display = 'none';
+            showNotification("File Deleted!");
+        }
+    }
+
+    // Mock Reboot Function
+    function rebootDevice() {
+        if(confirm("Reboot the ESP32? You will be disconnected.")) {
+            showNotification("Rebooting...");
+        }
+    }
+
+    // File Upload Visual Feedback
+    document.getElementById('lang-upload').addEventListener('change', function(e) {
+        if(this.files.length > 0) {
+            this.nextElementSibling.textContent = this.files[0].name + ' selected';
+            setTimeout(() => {
+                showNotification("File Uploaded!");
+                this.nextElementSibling.textContent = 'Choose File...';
+            }, 1000);
+        }
+    });
+
+    // Notification Logic
+    let notifTimeout;
+    function showNotification(msg) {
+        const notif = document.getElementById('notification');
+        notif.textContent = msg;
+        notif.classList.add('show');
+        
+        clearTimeout(notifTimeout);
+        notifTimeout = setTimeout(() => {
+            notif.classList.remove('show');
+        }, 3000);
+    }
+    // Real-time UI Scale Preview
+    document.getElementById('ui-scale').addEventListener('input', function(e) {
+        const scaleValue = e.target.value / 100;
+        document.querySelector('.container').style.transform = `scale(${scaleValue})`;
+        document.querySelector('.container').style.transformOrigin = 'top center';
+    });
+
+    // Real-time Font Preview
+    document.getElementById('font-select').addEventListener('change', function(e) {
+        const font = e.target.value;
+        if(font === 'pixel') {
+            document.body.style.fontFamily = '"Courier New", Courier, monospace';
+        } else if (font === 'smooth') {
+            document.body.style.fontFamily = '"Arial Rounded MT Bold", "Comic Sans MS", sans-serif';
+        } else {
+            document.body.style.fontFamily = "'Inter', sans-serif";
+        }
+    });
+
+    // Real-time Logo Preview
+    document.querySelectorAll('input[name="logo"]').forEach(radio => {
+        radio.addEventListener('change', function(e) {
+            const logoPreview = document.getElementById('live-logo');
+            if (e.target.value === 'dots') {
+                logoPreview.textContent = '. . .';
+            } else {
+                logoPreview.textContent = '♫';
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
