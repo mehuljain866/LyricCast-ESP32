@@ -155,8 +155,13 @@ void drawProgressiveText(String text, int x, int y, int fontChoice, float progre
   
   const GFXfont* f = getFontByChoice(fontChoice);
   display.setFont(f);
-  if (f == NULL || fontChoice == -1) display.setTextSize(1);
-  display.setCursor(x, y);
+  int drawY = y;
+  if (f == NULL || fontChoice == -1) {
+    display.setTextSize(1);
+    // Baseline conversion: default system font expects top-left cursor (height ~8px)
+    drawY = max(0, y - 7);
+  }
+  display.setCursor(x, drawY);
   display.print(sub);
 }
 
@@ -1169,23 +1174,23 @@ void drawSketchbookScene() {
     sketchComposition = "CENTER";
   }
 
-  // Strict 128x48 Blue Zone Vertical Alignment (Never clips top Y=0 or overlaps bottom Y=48!)
-  int prefixY = 11;
-  int focalY = 26;
+  // Strict 128x48 Blue Zone Vertical Alignment (Ample spacing, zero overlap, zero clipping)
+  int prefixY = 10;
+  int focalY = 25;
   int suffixY = 41;
 
   if (hasPrefix && hasFocal && hasSuffix) {
-    prefixY = 11;
-    focalY = 26;
+    prefixY = 10;
+    focalY = 25;
     suffixY = 41;
   } else if (hasPrefix && hasFocal && !hasSuffix) {
-    prefixY = 14;
-    focalY = 33;
+    prefixY = 12;
+    focalY = 36;
   } else if (!hasPrefix && hasFocal && hasSuffix) {
-    focalY = 17;
-    suffixY = 36;
+    focalY = 15;
+    suffixY = 39;
   } else if (!hasPrefix && hasFocal && !hasSuffix) {
-    focalY = 27; // Perfectly centered vertically!
+    focalY = 28; // Perfectly centered vertically!
   }
   
   int focalXOffset = 0;
@@ -1421,9 +1426,11 @@ void drawSketchbookScene() {
         bx = fx; by = focalY - 8; bw = fw; bh = 9;
       }
       int rx = max(0, bx - 3);
-      int ry = max(0, by - 2);
+      int ry = max(0, by - 1);
       int rw = min(128 - rx, bw + 6);
-      int rh = min(47 - ry, bh + 4);
+      int rh = min(47 - ry, bh + 3);
+      if (hasPrefix && ry < prefixY + 2) ry = prefixY + 2;
+      if (hasSuffix && ry + rh > suffixY - 8) rh = max(6, (suffixY - 8) - ry);
       display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
       display.setTextColor(SSD1306_BLACK);
       drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);

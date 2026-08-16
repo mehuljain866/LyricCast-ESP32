@@ -169,8 +169,9 @@ class LyricDirector:
             if w.isupper() and len(clean_w) > 1:
                 score += 10.0
             
-            position_bias = (idx / max(1, len(words) - 1)) * 3.0
-            score += position_bias
+            # Central balance bonus (rewards words that balance prefix and suffix)
+            center_ratio = 1.0 - (abs(idx - (len(words) - 1) / 2.0) / max(1, (len(words) - 1) / 2.0))
+            score += center_ratio * 4.0
 
             if score > max_score:
                 max_score = score
