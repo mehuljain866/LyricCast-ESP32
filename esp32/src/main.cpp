@@ -48,6 +48,24 @@ float marqueeX = 128;
 unsigned long lastMarqueeMs = 0;
 
 // ==========================================
+// PROCEDURAL EASING FUNCTIONS
+// ==========================================
+float easeLinear(float t) { return t; }
+float easeOutQuad(float t) { return t * (2.0f - t); }
+float easeInOutQuad(float t) { return t < 0.5f ? 2.0f * t * t : -1.0f + (4.0f - 2.0f * t) * t; }
+float easeOutBack(float t) {
+  float c1 = 1.70158f; float c3 = c1 + 1.0f;
+  return 1.0f + c3 * pow(t - 1.0f, 3) + c1 * pow(t - 1.0f, 2);
+}
+float easeOutBounce(float t) {
+  float n1 = 7.5625f, d1 = 2.75f;
+  if (t < 1.0f / d1) return n1 * t * t;
+  else if (t < 2.0f / d1) { t -= 1.5f / d1; return n1 * t * t + 0.75f; }
+  else if (t < 2.5f / d1) { t -= 2.25f / d1; return n1 * t * t + 0.9375f; }
+  else { t -= 2.625f / d1; return n1 * t * t + 0.984375f; }
+}
+
+// ==========================================
 // FONT STYLES & FAMILIES
 // ==========================================
 enum FontStyle {
@@ -92,7 +110,6 @@ CompanionType currentCompanion = COMPANION_CAT;
 int companionFrame = 0;
 unsigned long lastCompanionMs = 0;
 
-// 1. Lo-Fi Headphone Cat (24x24, 4 Frames)
 const unsigned char PROGMEM cat_frame0[] = {
   0x00,0x00,0x00, 0x00,0x00,0x00, 0x08,0x20,0x10, 0x1c,0x20,0x38,
   0x3e,0x70,0x7c, 0x3f,0xf8,0xfc, 0x7f,0xfc,0xfe, 0x7f,0xfe,0xfe,
@@ -126,7 +143,6 @@ const unsigned char PROGMEM cat_frame3[] = {
   0x07,0xee,0x80, 0x0f,0xfc,0x00, 0x07,0xf8,0x00, 0x00,0x00,0x00
 };
 
-// 2. Vibe Dancer / Head-Bobbing Dude (24x24, 4 Frames)
 const unsigned char PROGMEM vibe_frame0[] = {
   0x00,0x38,0x00, 0x00,0x7c,0x00, 0x00,0xfe,0x00, 0x01,0xaa,0x80,
   0x01,0xaa,0x80, 0x01,0xba,0x80, 0x00,0xfe,0x00, 0x00,0x7c,0x00,
@@ -160,7 +176,6 @@ const unsigned char PROGMEM vibe_frame3[] = {
   0x07,0x01,0xc0, 0x06,0x00,0xc0, 0x00,0x00,0x00, 0x00,0x00,0x00
 };
 
-// 3. Spinning Vinyl Record (24x24, 4 Frames)
 const unsigned char PROGMEM vinyl_frame0[] = {
   0x00,0x7e,0x00, 0x03,0xff,0xc0, 0x07,0x81,0xe0, 0x0e,0x7e,0x70,
   0x1c,0xff,0x38, 0x39,0x81,0x9c, 0x33,0x3c,0xcc, 0x73,0x7e,0xce,
@@ -194,7 +209,6 @@ const unsigned char PROGMEM vinyl_frame3[] = {
   0x00,0x7e,0x00, 0x00,0x00,0x00, 0x00,0x00,0x00, 0x00,0x00,0x00
 };
 
-// 4. Bouncing Pixel Ghost / Blob (24x24, 4 Frames)
 const unsigned char PROGMEM ghost_frame0[] = {
   0x00,0x7e,0x00, 0x01,0xff,0x80, 0x03,0xff,0xc0, 0x07,0xff,0xe0,
   0x0f,0xff,0xf0, 0x0f,0xbd,0xf0, 0x1f,0xbd,0xf8, 0x1f,0xff,0xf8,
@@ -260,40 +274,55 @@ void drawCompanion(int x, int y) {
 }
 
 // ==========================================
-// VECTOR DOODLE PRIMITIVES (ESP32)
+// PROCEDURAL PROGRESSIVE VECTOR DOODLERS
 // ==========================================
-void drawMiniHeart(int cx, int cy) {
-  display.drawPixel(cx-2, cy-2, SSD1306_WHITE);
-  display.drawPixel(cx-1, cy-3, SSD1306_WHITE);
-  display.drawPixel(cx, cy-2, SSD1306_WHITE);
-  display.drawPixel(cx+1, cy-3, SSD1306_WHITE);
-  display.drawPixel(cx+2, cy-2, SSD1306_WHITE);
-  display.drawLine(cx-2, cy-1, cx+2, cy-1, SSD1306_WHITE);
-  display.drawLine(cx-1, cy, cx+1, cy, SSD1306_WHITE);
-  display.drawPixel(cx, cy+1, SSD1306_WHITE);
+void drawProgressiveHeart(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  int steps = (int)(progress * 16.0f);
+  int lastX = cx, lastY = cy;
+  for (int i = 0; i <= steps; i++) {
+    float t = (i / 16.0f) * 2.0f * PI;
+    float x = 16.0f * pow(sin(t), 3);
+    float y = -(13.0f * cos(t) - 5.0f * cos(2.0f*t) - 2.0f * cos(3.0f*t) - cos(4.0f*t));
+    int px = cx + (int)((x / 16.0f) * 6.0f);
+    int py = cy + (int)((y / 16.0f) * 6.0f);
+    if (i > 0) display.drawLine(lastX, lastY, px, py, SSD1306_WHITE);
+    lastX = px; lastY = py;
+  }
 }
 
-void drawMiniStar(int cx, int cy) {
-  display.drawLine(cx-3, cy, cx+3, cy, SSD1306_WHITE);
-  display.drawLine(cx, cy-3, cx, cy+3, SSD1306_WHITE);
-  display.drawPixel(cx-1, cy-1, SSD1306_WHITE);
-  display.drawPixel(cx+1, cy+1, SSD1306_WHITE);
-  display.drawPixel(cx-1, cy+1, SSD1306_WHITE);
-  display.drawPixel(cx+1, cy-1, SSD1306_WHITE);
+void drawProgressiveStar(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  int len = (int)(progress * 4.0f);
+  display.drawLine(cx - len, cy, cx + len, cy, SSD1306_WHITE);
+  display.drawLine(cx, cy - len, cx, cy + len, SSD1306_WHITE);
+  if (progress > 0.6f) {
+    display.drawPixel(cx - 1, cy - 1, SSD1306_WHITE);
+    display.drawPixel(cx + 1, cy + 1, SSD1306_WHITE);
+    display.drawPixel(cx - 1, cy + 1, SSD1306_WHITE);
+    display.drawPixel(cx + 1, cy - 1, SSD1306_WHITE);
+  }
 }
 
-void drawMiniArrow(int x1, int y1, int x2, int y2) {
-  display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
-  display.drawLine(x2, y2, x2-3, y2-2, SSD1306_WHITE);
-  display.drawLine(x2, y2, x2-3, y2+2, SSD1306_WHITE);
+void drawProgressiveArrow(int x1, int y1, int x2, int y2, float progress) {
+  if (progress <= 0.0f) return;
+  int curX = x1 + (int)((x2 - x1) * min(1.0f, progress * 1.3f));
+  int curY = y1 + (int)((y2 - y1) * min(1.0f, progress * 1.3f));
+  display.drawLine(x1, y1, curX, curY, SSD1306_WHITE);
+  if (progress > 0.7f) {
+    display.drawLine(curX, curY, curX - 3, curY - 2, SSD1306_WHITE);
+    display.drawLine(curX, curY, curX - 3, curY + 2, SSD1306_WHITE);
+  }
 }
 
-void drawWobblyUnderline(int x1, int x2, int y) {
+void drawProgressiveUnderline(int x1, int x2, int y, float progress) {
+  if (progress <= 0.0f) return;
+  int targetX = x1 + (int)((x2 - x1) * min(1.0f, progress * 1.4f));
   int curX = x1;
   int step = max(4, (x2 - x1) / 4);
   int curY = y;
-  while (curX < x2) {
-    int nextX = min(x2, curX + step);
+  while (curX < targetX) {
+    int nextX = min(targetX, curX + step);
     int nextY = y + ((curX / step) % 2 == 0 ? 1 : -1);
     display.drawLine(curX, curY, nextX, nextY, SSD1306_WHITE);
     curX = nextX;
@@ -301,17 +330,44 @@ void drawWobblyUnderline(int x1, int x2, int y) {
   }
 }
 
+void drawProgressiveText(String text, int x, int y, int fontChoice, float progress) {
+  if (text.length() == 0 || progress <= 0.0f) return;
+  int visibleChars = (int)(text.length() * min(1.0f, progress * 1.5f));
+  if (visibleChars <= 0) visibleChars = 1;
+  String sub = text.substring(0, visibleChars);
+  
+  if (fontChoice == 0) {
+    display.setFont(&FreeSansBold12pt7b);
+    display.setCursor(x, y);
+    display.print(sub);
+  } else if (fontChoice == 1) {
+    display.setFont(&FreeSansBold9pt7b);
+    display.setCursor(x, y);
+    display.print(sub);
+  } else if (fontChoice == 2) {
+    display.setFont(&FreeSerifItalic9pt7b);
+    display.setCursor(x, y);
+    display.print(sub);
+  } else {
+    u8g2_gfx.setFont(u8g2_font_victoriabold8_8u);
+    u8g2_gfx.setCursor(x, y);
+    u8g2_gfx.print(sub);
+  }
+}
+
 // ==========================================
-// SKETCHBOOK DIRECTOR STATE
+// SCENE GRAPH & PROCEDURAL STATE
 // ==========================================
 bool isSketchbookMode = true;
 String sketchMetaphor = "NORMAL";
 String sketchDoodle = "NONE";
+String sketchComposition = "CENTER";
 String sketchFocalWord = "";
 String sketchPrefix = "";
 String sketchSuffix = "";
 int sketchTilt = 0;
 bool sketchUnderline = false;
+uint32_t sketchDurationMs = 3000;
 unsigned long sketchSceneStartMs = 0;
 
 // Dynamic Font Caching Structures
@@ -364,7 +420,6 @@ LyricLayout calculateLayout(String text) {
     return layout;
   }
 
-  // --- INTERNATIONAL UNIFONT HANDLER ---
   if (layout.isInternational) {
     if (isCyrillic(text)) {
       layout.u8g2_font = u8g2_font_unifont_t_cyrillic;
@@ -416,7 +471,6 @@ LyricLayout calculateLayout(String text) {
     return layout;
   }
 
-  // --- ENGLISH DYNAMIC SCALING ---
   const GFXfont** fonts = getActiveFonts();
   int* heights = getActiveHeights();
   
@@ -658,46 +712,54 @@ void drawParticles() {
 }
 
 // ==========================================
-// SKETCHBOOK SCENE RENDERER (ESP32)
+// PROCEDURAL 2D SCENE GRAPH RENDERER (ESP32)
 // ==========================================
 void drawSketchbookScene() {
   int minX = (currentCompanion != COMPANION_NONE) ? 28 : 2;
   int availWidth = 128 - minX;
   
   unsigned long ageMs = millis() - sketchSceneStartMs;
-  float tSec = (float)ageMs / 1000.0;
+  float rawProgress = (float)ageMs / (float)max((uint32_t)500, sketchDurationMs);
+  if (rawProgress > 1.0f) rawProgress = 1.0f;
   
-  // Physics offset for focal word
-  int focalY = 27;
+  float easeProgress = easeOutQuad(rawProgress);
+  float bounceProgress = easeOutBounce(min(1.0f, rawProgress * 2.0f));
+  float tSec = (float)ageMs / 1000.0f;
+  
+  // Physics Calculation
+  int focalTargetY = 27;
+  int focalY = focalTargetY;
   int focalXOffset = 0;
   
   if (sketchMetaphor == "FALLING") {
-    if (ageMs < 400) {
-      focalY = -15 + (ageMs * 42) / 400;
-    }
+    focalY = -18 + (int)(bounceProgress * (focalTargetY + 18));
   } else if (sketchMetaphor == "FLYING") {
-    focalY = 27 - (int)(sin(tSec * 4.0) * 3.0);
+    focalY = focalTargetY - (int)(sin(tSec * 3.5f) * 3.5f);
   } else if (sketchMetaphor == "SPINNING" || sketchMetaphor == "SHAKE" || sketchMetaphor == "SCREAM") {
-    focalXOffset = (int)(sin(tSec * 18.0) * 2.5);
+    focalXOffset = (int)(sin(tSec * 16.0f) * (sketchMetaphor == "SCREAM" ? 3.0f : 1.8f));
+  } else if (sketchComposition == "ISOLATED") {
+    focalY = 25; // Dead center in negative space
   }
-  
-  // 1. Draw Prefix (Top)
-  if (sketchPrefix.length() > 0) {
+
+  // 1. Render Prefix
+  if (sketchPrefix.length() > 0 && sketchComposition != "ISOLATED") {
     u8g2_gfx.setFont(u8g2_font_victoriabold8_8u);
     int pw = u8g2_gfx.getUTF8Width(sketchPrefix.c_str());
     int px = minX + (availWidth - pw) / 2;
-    u8g2_gfx.setCursor(max(minX, px), 10);
-    u8g2_gfx.print(sketchPrefix);
+    if (sketchComposition == "DIAGONAL") px = minX + 2;
+    
+    drawProgressiveText(sketchPrefix, max(minX, px), 10, 3, rawProgress);
   }
   
-  // 2. Draw Focal Word (MASSIVE in Middle)
+  // 2. Render Focal Word with Progressive Handwriting
   if (sketchFocalWord.length() > 0) {
+    int fontId = 0; // FreeSansBold12pt
     display.setFont(&FreeSansBold12pt7b);
     int16_t x1, y1; uint16_t fw, fh;
     display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
     
-    // Auto-scale down if focal word exceeds available width
     if (fw > availWidth) {
+      fontId = 1; // FreeSansBold9pt
       display.setFont(&FreeSansBold9pt7b);
       display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
     }
@@ -705,31 +767,31 @@ void drawSketchbookScene() {
     int fx = minX + (availWidth - (int)fw) / 2 + focalXOffset;
     if (fx < minX) fx = minX;
     
-    display.setCursor(fx, focalY);
-    display.print(sketchFocalWord);
+    drawProgressiveText(sketchFocalWord, fx, focalY, fontId, rawProgress);
     
-    // Hand-drawn Underline
+    // Hand-Drawn Wobbly Underline (Reveals progressively)
     if (sketchUnderline) {
-      drawWobblyUnderline(fx - 2, fx + fw + 2, focalY + 3);
+      drawProgressiveUnderline(fx - 2, fx + fw + 2, focalY + 3, rawProgress);
     }
     
-    // Draw Doodles
+    // Procedural Vector Doodles
     if (sketchDoodle == "HEART") {
-      drawMiniHeart(fx + fw + 6, focalY - 8);
+      drawProgressiveHeart(fx + fw + 7, focalY - 8, rawProgress);
     } else if (sketchDoodle == "STAR") {
-      drawMiniStar(fx - 8, focalY - 10);
+      drawProgressiveStar(fx - 8, focalY - 10, rawProgress);
     } else if (sketchDoodle == "ARROW") {
-      drawMiniArrow(minX + 2, focalY - 12, fx - 4, focalY - 4);
+      drawProgressiveArrow(minX + 2, focalY - 12, fx - 4, focalY - 4, rawProgress);
     }
   }
   
-  // 3. Draw Suffix (Bottom)
-  if (sketchSuffix.length() > 0) {
+  // 3. Render Suffix
+  if (sketchSuffix.length() > 0 && sketchComposition != "ISOLATED") {
     u8g2_gfx.setFont(u8g2_font_victoriabold8_8u);
     int sw = u8g2_gfx.getUTF8Width(sketchSuffix.c_str());
     int sx = minX + (availWidth - sw) / 2;
-    u8g2_gfx.setCursor(max(minX, sx), 42);
-    u8g2_gfx.print(sketchSuffix);
+    if (sketchComposition == "DIAGONAL") sx = minX + availWidth - sw - 2;
+    
+    drawProgressiveText(sketchSuffix, max(minX, sx), 42, 3, rawProgress);
   }
 }
 
@@ -754,22 +816,26 @@ void parseSerialData(String data) {
     }
   } 
   else if (data.startsWith("K|")) {
-    // Protocol: K|<metaphor>|<doodle>|<focal>|<prefix>|<suffix>|<tilt>|<underline>
+    // Protocol: K|<metaphor>|<doodle>|<composition>|<focal>|<prefix>|<suffix>|<tilt>|<underline>|<durationMs>
     int p1 = data.indexOf('|', 2);
     int p2 = data.indexOf('|', p1 + 1);
     int p3 = data.indexOf('|', p2 + 1);
     int p4 = data.indexOf('|', p3 + 1);
     int p5 = data.indexOf('|', p4 + 1);
     int p6 = data.indexOf('|', p5 + 1);
+    int p7 = data.indexOf('|', p6 + 1);
+    int p8 = data.indexOf('|', p7 + 1);
     
-    if (p1 > 0 && p2 > 0 && p3 > 0 && p4 > 0 && p5 > 0 && p6 > 0) {
+    if (p1 > 0 && p2 > 0 && p3 > 0 && p4 > 0 && p5 > 0 && p6 > 0 && p7 > 0 && p8 > 0) {
       sketchMetaphor = data.substring(2, p1);
       sketchDoodle = data.substring(p1 + 1, p2);
-      sketchFocalWord = data.substring(p2 + 1, p3);
-      sketchPrefix = data.substring(p3 + 1, p4);
-      sketchSuffix = data.substring(p4 + 1, p5);
-      sketchTilt = data.substring(p5 + 1, p6).toInt();
-      sketchUnderline = (data.substring(p6 + 1).toInt() == 1);
+      sketchComposition = data.substring(p2 + 1, p3);
+      sketchFocalWord = data.substring(p3 + 1, p4);
+      sketchPrefix = data.substring(p4 + 1, p5);
+      sketchSuffix = data.substring(p5 + 1, p6);
+      sketchTilt = data.substring(p6 + 1, p7).toInt();
+      sketchUnderline = (data.substring(p7 + 1, p8).toInt() == 1);
+      sketchDurationMs = data.substring(p8 + 1).toInt();
       sketchSceneStartMs = millis();
     }
   }
