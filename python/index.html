@@ -722,17 +722,24 @@
         const w = canvas.width;
         const h = canvas.height;
 
-        // 1. Draw Paper Background & Faint Notebook Lines
-        ctx.fillStyle = '#fffdfa';
+        // Strict OLED Display Aspect Ratio: Top 75% = Blue Zone, Bottom 25% = Yellow Zone
+        const blueH = h * 0.75;
+        const yellowH = h * 0.25;
+
+        // 1. Draw OLED Background
+        ctx.fillStyle = '#0a0d14';
         ctx.fillRect(0, 0, w, h);
 
-        ctx.strokeStyle = 'rgba(226, 217, 204, 0.5)';
-        ctx.lineWidth = 1;
-        for (let y = 30; y < h; y += 28) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(w, y);
-            ctx.stroke();
+        // Subtle Blue Zone Boundary & Living Particles
+        ctx.fillStyle = 'rgba(0, 210, 255, 0.03)';
+        ctx.fillRect(0, 0, w, blueH);
+
+        // Living ambient particles in blue zone
+        for (let i = 0; i < 3; i++) {
+            const px = ((animTime * 40 + i * 120) % (w - 20)) + 10;
+            const py = 15 + Math.sin(animTime * 2 + i * 2) * 12 + i * 15;
+            ctx.fillStyle = 'rgba(0, 220, 255, 0.4)';
+            ctx.fillRect(px, py, 2, 2);
         }
 
         // 2. Physics & Motion Offsets
@@ -742,95 +749,118 @@
 
         const metaphor = (currentSceneData.metaphor || 'normal').toLowerCase();
         if (metaphor === 'falling') {
-            if (sceneAge < 0.6) {
-                offsetY = -80 + (sceneAge / 0.6) * 80 + Math.sin(sceneAge * 15) * 4;
-            }
+            if (sceneAge < 0.6) offsetY = -30 + (sceneAge / 0.6) * 30;
         } else if (metaphor === 'flying') {
-            offsetY = -Math.sin(animTime * 2) * 6;
+            offsetY = -Math.sin(animTime * 2) * 5;
         } else if (metaphor === 'spinning' || metaphor === 'shake') {
-            rotation += Math.sin(animTime * 8) * 0.08;
-        } else if (metaphor === 'scream') {
-            offsetY = (Math.random() - 0.5) * 4;
-            scalePunch = 1.05 + Math.sin(animTime * 12) * 0.05;
+            rotation += Math.sin(animTime * 8) * 0.05;
         }
-
-        ctx.save();
-        ctx.translate(w / 2, h / 2 + offsetY);
-        ctx.rotate(rotation);
-        ctx.scale(scalePunch, scalePunch);
 
         const raw = currentSceneData.raw_text || '';
         const isIdle = raw === '...' || raw === '♫' || raw === '♥' || raw === '★' || raw === '☺' || raw === 'Waiting for Spotify';
 
+        ctx.save();
+        ctx.translate(w / 2, blueH / 2 + offsetY);
+        ctx.rotate(rotation);
+        ctx.scale(scalePunch, scalePunch);
+
         if (isIdle) {
-            ctx.font = 'italic 28px "Georgia", serif';
-            ctx.fillStyle = '#a0aec0';
+            ctx.font = 'italic 18px "Georgia", serif';
+            ctx.fillStyle = '#00d2ff';
             ctx.textAlign = 'center';
-            ctx.fillText(raw === '...' ? '♫ Listening...' : raw, 0, 10);
+            ctx.fillText(raw === '...' ? '♫ Ready for Spotify' : raw, 0, 6);
         } else {
             const prefix = currentSceneData.prefix || '';
             const focal = currentSceneData.focal_word || '';
             const suffix = currentSceneData.suffix || '';
+            const comp = (currentSceneData.composition || 'CENTER').toUpperCase();
 
-            // Draw Prefix (Upper / Small)
-            if (prefix) {
-                ctx.font = 'italic 15px "Georgia", serif';
-                ctx.fillStyle = '#4a5568';
-                ctx.textAlign = 'center';
-                ctx.fillText(prefix, 0, -32);
+            // Font Preset selection matching ESP32
+            const preset = currentSceneData.font_preset || 0;
+            let focalFont = 'bold 24px "FreeSerif", Georgia, serif';
+            if (preset === 1) focalFont = 'bold 24px "FreeSans", -apple-system, sans-serif';
+            else if (preset === 3) focalFont = 'bold 22px "Courier New", monospace';
+            else if (preset === 4) focalFont = 'italic bold 22px "Georgia", serif';
+
+            // Draw Prefix
+            if (prefix && comp !== 'MONOLITH') {
+                ctx.font = 'italic 13px "Georgia", serif';
+                ctx.fillStyle = 'rgba(0, 210, 255, 0.75)';
+                ctx.textAlign = (comp === 'STACKED') ? 'left' : 'center';
+                const px = (comp === 'STACKED') ? -w / 2 + 18 : 0;
+                ctx.fillText(prefix, px, -22);
             }
 
-            // Draw Focal Word (MASSIVE & BOLD)
-            ctx.font = 'bold 36px "Courier New", monospace';
-            ctx.fillStyle = '#1a202c';
-            ctx.textAlign = 'center';
+            // Draw Focal Word
+            ctx.font = focalFont;
+            ctx.fillStyle = '#00e5ff';
+            ctx.textAlign = (comp === 'STACKED') ? 'left' : 'center';
+            const fx = (comp === 'STACKED') ? -w / 2 + 18 : 0;
             const focalWidth = ctx.measureText(focal).width;
-            ctx.fillText(focal, 0, 5);
 
-            // Draw Hand-drawn Underline
-            if (currentSceneData.has_underline && focal) {
-                ctx.strokeStyle = '#e53e3e';
-                ctx.lineWidth = 2.5;
+            // Inverted Badge FX
+            if (currentSceneData.fx_flags & 1) {
+                ctx.fillStyle = '#00e5ff';
+                const bx = (comp === 'STACKED') ? fx - 4 : -focalWidth / 2 - 6;
+                ctx.fillRect(bx, -16, focalWidth + 12, 24);
+                ctx.fillStyle = '#0a0d14';
+            }
+
+            ctx.fillText(focal, fx, 2);
+
+            // Underline FX
+            if (currentSceneData.has_underline && !(currentSceneData.fx_flags & 1)) {
+                ctx.strokeStyle = '#00e5ff';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                const ux1 = -focalWidth / 2 - 4;
-                const ux2 = focalWidth / 2 + 4;
-                const uy = 14;
-                ctx.moveTo(ux1, uy);
-                for (let x = ux1; x <= ux2; x += 10) {
-                    ctx.lineTo(x, uy + Math.sin(x * 0.3 + animTime * 3) * 1.8);
-                }
+                const ux1 = (comp === 'STACKED') ? fx : -focalWidth / 2 - 4;
+                const ux2 = (comp === 'STACKED') ? fx + focalWidth : focalWidth / 2 + 4;
+                ctx.moveTo(ux1, 8);
+                ctx.lineTo(ux2, 8);
                 ctx.stroke();
             }
 
-            // Draw Suffix (Lower / Cursive)
-            if (suffix) {
-                ctx.font = 'italic 16px "Georgia", serif';
-                ctx.fillStyle = '#4a5568';
-                ctx.textAlign = 'center';
-                ctx.fillText(suffix, 0, 42);
+            // Draw Suffix
+            if (suffix && comp !== 'MONOLITH') {
+                ctx.font = 'italic 13px "Georgia", serif';
+                ctx.fillStyle = 'rgba(0, 210, 255, 0.75)';
+                ctx.textAlign = (comp === 'STACKED') ? 'left' : 'center';
+                const sx = (comp === 'STACKED') ? -w / 2 + 18 : 0;
+                ctx.fillText(suffix, sx, 24);
             }
 
-            // Draw Hand-Drawn Doodles
+            // Procedural Doodle Preview
             const doodle = (currentSceneData.doodle || 'none').toLowerCase();
             if (doodle === 'heart') {
-                ctx.fillStyle = '#e53e3e';
-                ctx.strokeStyle = '#c53030';
-                ctx.lineWidth = 1.5;
-                const pulse = 1.0 + Math.sin(animTime * 6) * 0.15;
-                drawHeartPath(ctx, focalWidth / 2 + 25, -10, 10 * pulse);
+                ctx.fillStyle = '#ff3366';
+                drawHeartPath(ctx, focalWidth / 2 + 20, -6, 8);
             } else if (doodle === 'star') {
-                ctx.fillStyle = '#d69e2e';
-                ctx.strokeStyle = '#b7791f';
-                ctx.lineWidth = 1.5;
-                drawStarPath(ctx, -focalWidth / 2 - 25, -15, 9, 4, animTime * 3);
-            } else if (doodle === 'arrow') {
-                ctx.strokeStyle = '#3182ce';
-                ctx.lineWidth = 2;
-                drawArrowPath(ctx, -focalWidth / 2 - 35, -20, -focalWidth / 2 - 6, 0);
+                ctx.fillStyle = '#ffcc00';
+                drawStarPath(ctx, focalWidth / 2 + 18, -6, 8, 4, animTime * 2);
+            } else if (doodle === 'rose') {
+                ctx.fillStyle = '#ff3366';
+                drawHeartPath(ctx, focalWidth / 2 + 18, -6, 7);
             }
         }
 
         ctx.restore();
+
+        // 3. Draw Yellow Zone (Bottom Status Bar)
+        ctx.fillStyle = '#0e121a';
+        ctx.fillRect(0, blueH, w, yellowH);
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, blueH, w, 0.5);
+
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#ffcc00';
+        ctx.textAlign = 'center';
+        ctx.fillText("DAISIES - Justin Bieber", w / 2, blueH + 14);
+
+        // Sleek Progress Bar
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillRect(0, h - 3, (w * 0.45), 3);
+
         requestAnimationFrame(drawSketchbook);
     }
 
