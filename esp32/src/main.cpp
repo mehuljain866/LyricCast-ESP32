@@ -147,12 +147,9 @@ const GFXfont* getFontByChoice(int choice) {
   }
 }
 
-// Snappy Progressive Text (Full reveal within 250ms flat)
+// 100% Full Text Immediate Centering (Never shifts or jumps between play and pause!)
 void drawProgressiveText(String text, int x, int y, int fontChoice, float progress) {
   if (text.length() == 0 || progress <= 0.0f) return;
-  int visibleChars = max(1, (int)(text.length() * min(1.0f, progress * 4.5f)));
-  String sub = text.substring(0, visibleChars);
-  
   const GFXfont* f = getFontByChoice(fontChoice);
   display.setFont(f);
   int drawY = y;
@@ -162,7 +159,23 @@ void drawProgressiveText(String text, int x, int y, int fontChoice, float progre
     drawY = max(0, y - 7);
   }
   display.setCursor(x, drawY);
-  display.print(sub);
+  display.print(text);
+}
+
+void drawProgressiveCoffin(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  // Hexagonal coffin outline
+  display.drawLine(cx - 3, cy - 6, cx + 3, cy - 6, SSD1306_WHITE); // Head
+  display.drawLine(cx - 3, cy - 6, cx - 5, cy - 2, SSD1306_WHITE); // Left shoulder
+  display.drawLine(cx + 3, cy - 6, cx + 5, cy - 2, SSD1306_WHITE); // Right shoulder
+  display.drawLine(cx - 5, cy - 2, cx - 3, cy + 6, SSD1306_WHITE); // Left taper
+  display.drawLine(cx + 5, cy - 2, cx + 3, cy + 6, SSD1306_WHITE); // Right taper
+  display.drawLine(cx - 3, cy + 6, cx + 3, cy + 6, SSD1306_WHITE); // Foot
+  // Engraved cross
+  if (progress > 0.3f) {
+    display.drawLine(cx, cy - 3, cx, cy + 2, SSD1306_WHITE);
+    display.drawLine(cx - 2, cy - 1, cx + 2, cy - 1, SSD1306_WHITE);
+  }
 }
 
 // ==========================================
@@ -818,6 +831,7 @@ void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now
   else if (doodle == "CLOUD") drawProgressiveCloud(cx, cy, progress);
   else if (doodle == "CHERRY") drawProgressiveCherry(cx, cy, progress);
   else if (doodle == "PADLOCK") drawProgressivePadlock(cx, cy, progress);
+  else if (doodle == "COFFIN") drawProgressiveCoffin(cx, cy, progress);
   else if (doodle == "ARROW") drawProgressiveArrow(4, cy - 4, cx - 2, cy - 2, progress);
 }
 
@@ -1197,15 +1211,9 @@ void drawSketchbookScene() {
   float breathe = sin(now * 0.006f) * 1.0f;
   
   if (sketchMetaphor == "FALLING") {
-    focalY += (int)(-6 + easeOutBounce(enterT) * 6.0f);
+    focalY += (int)(-5 + easeOutBounce(enterT) * 5.0f);
   } else if (sketchMetaphor == "FLYING") {
-    focalY += (int)(6 - easeOutQuad(enterT) * 6.0f);
-  } else if (sketchMetaphor == "RUNNING") {
-    focalXOffset = (int)(-16 + enterEased * 16.0f);
-  } else if (sketchMetaphor == "SPINNING") {
-    focalXOffset = (int)(sin(rawProgress * 12.0f) * 3.0f);
-  } else if (sketchMetaphor == "SHAKE") {
-    focalXOffset = (int)(sin(now * 0.05f) * 2.0f);
+    focalY += (int)(5 - easeOutQuad(enterT) * 5.0f);
   } else {
     focalY += (int)breathe;
   }
