@@ -24,7 +24,7 @@ METAPHORS = {
 # 50+ Semantic Doodle Keyword Categories with Context-Aware Directionals
 DOODLE_MAP = {
     'down': ['down', 'bottom', 'low', 'drop', 'dropping', 'sink', 'sinking', 'below', 'under', 'ground', 'floor'],
-    'up': ['up', 'high', 'higher', 'rise', 'rising', 'top', 'above', 'sky', 'clouds', 'soar'],
+    'up': ['up', 'higher', 'rise', 'rising', 'top', 'above', 'elevate', 'soar'],
     'left': ['left', 'back', 'behind', 'past', 'yesterday', 'return'],
     'phone': ['phone', 'call', 'calling', 'text', 'message', 'ring', 'ringing', 'hello', 'dial', 'telephone', 'talk'],
     'home': ['home', 'house', 'roof', 'room', 'stay', 'door', 'bed', 'walls', 'inside', 'living', 'place', 'hometown'],
@@ -59,8 +59,11 @@ DOODLE_MAP = {
     'planet': ['planet', 'space', 'universe', 'earth', 'galaxy', 'orbit', 'alien', 'rocket'],
     'leaf': ['leaf', 'leaves', 'autumn', 'tree', 'wind', 'nature', 'breeze'],
     'candle': ['candle', 'wick', 'wax', 'pray', 'prayer'],
-    'pill': ['pill', 'pills', 'medicine', 'drug', 'drugs', 'high', 'numb', 'cure', 'heal', 'disease', 'sick'],
+    'pill': ['pill', 'pills', 'medicine', 'drug', 'drugs', 'numb', 'cure', 'heal', 'disease', 'sick'],
     'glasses': ['glasses', 'shades', 'cool', 'style', 'fashion', 'sunglasses'],
+    'cloud': ['cloud', 'clouds', 'fog', 'weather', 'sky', 'sweater', 'rainy', 'haze', 'overcast', 'mist', 'wind', 'breeze', 'stormy', 'grey', 'gray', 'fluffy', 'air', 'soar'],
+    'cherry': ['cherry', 'cherries', 'fruit', 'taste', 'berry', 'pie'],
+    'padlock': ['locked', 'safe', 'secure', 'protect', 'guard'],
     'coffin': ['died', 'die', 'dying', 'death', 'dead', 'grave', 'coffin', 'casket', 'bury', 'buried', 'rip', 'funeral', 'tomb', 'cemetery'],
     'skull': ['skull', 'skeleton', 'poison', 'toxic', 'danger', 'kill', 'killer', 'murder'],
     'balloon': ['balloon', 'balloons', 'party', 'birthday', 'celebrate'],
@@ -71,9 +74,6 @@ DOODLE_MAP = {
     'headphones': ['headphones', 'earphones', 'bass', 'audio'],
     'battery': ['battery', 'charge', 'empty', 'full', 'energy'],
     'bow': ['cupid', 'bow', 'archery'],
-    'cloud': ['cloud', 'clouds', 'fog', 'gray', 'grey', 'fluffy', 'weather'],
-    'cherry': ['cherry', 'cherries', 'fruit', 'taste', 'berry', 'pie'],
-    'padlock': ['locked', 'safe', 'secure', 'protect', 'guard'],
     'bubble': ['think', 'thinking', 'thought', 'thoughts', 'say', 'saying', 'speak', 'words', 'tell', 'whisper'],
     'box': ['name', 'title', 'brand', 'label', 'tag', 'number', 'one', 'best', 'legend'],
     'circle': ['all', 'everything', 'world', 'whole', 'complete', 'around'],
@@ -153,13 +153,13 @@ class LyricDirector:
 
         self.last_doodle = detected_doodle
 
-        # 3. Typographic Hierarchy (Focal Word Selection)
+        # 3. Typographic Hierarchy (Focal Word Selection with Balanced Length Splitting)
         focal_index = -1
-        max_score = -1
+        max_score = -9999.0
 
         for idx, w in enumerate(words):
             clean_w = re.sub(r'[^\w]', '', w).lower()
-            if clean_w in STOP_WORDS or len(clean_w) < 2:
+            if clean_w in STOP_WORDS and len(words) > 3:
                 continue
             
             score = len(clean_w) * 1.5
@@ -170,9 +170,17 @@ class LyricDirector:
             if w.isupper() and len(clean_w) > 1:
                 score += 10.0
             
-            # Central balance bonus (rewards words that balance prefix and suffix)
+            # Line length balancing: heavily penalize unbalanced splits where prefix or suffix exceeds 20 characters!
+            prefix_cand = " ".join(words[:idx])
+            suffix_cand = " ".join(words[idx + 1:])
+            if len(prefix_cand) > 20:
+                score -= (len(prefix_cand) - 20) * 3.0
+            if len(suffix_cand) > 20:
+                score -= (len(suffix_cand) - 20) * 3.0
+            
+            # Central balance bonus (rewards words near middle so lines split evenly)
             center_ratio = 1.0 - (abs(idx - (len(words) - 1) / 2.0) / max(1, (len(words) - 1) / 2.0))
-            score += center_ratio * 4.0
+            score += center_ratio * 12.0
 
             if score > max_score:
                 max_score = score
@@ -187,7 +195,7 @@ class LyricDirector:
 
         # PRESERVE 100% OF ALL SUNG WORDS (ZERO TRUNCATION!)
         prefix_str = " ".join(prefix_words).strip()
-        suffix_str = " ".join(suffix_words).strip()
+        suffix_str = " ".join(suffix_words).strip().strip()
 
         # 4. Rich Compositional Archetypes (8 Archetypes!)
         compositions = ["CENTER", "DIAGONAL", "STACKED", "INVERSE", "COMIC", "SPLIT", "DREAMY"]

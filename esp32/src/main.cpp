@@ -179,7 +179,7 @@ void drawProgressiveCoffin(int cx, int cy, float progress) {
 }
 
 // ==========================================
-// CUSTOMIZABLE AMBIENT PARTICLES (6 Styles)
+// CUSTOMIZABLE AMBIENT PARTICLES (7 Styles)
 // ==========================================
 enum ParticleStyle {
   PARTICLE_SPARKLES = 0,
@@ -187,7 +187,8 @@ enum ParticleStyle {
   PARTICLE_STARS = 2,
   PARTICLE_BUBBLES = 3,
   PARTICLE_RAIN = 4,
-  PARTICLE_OFF = 5
+  PARTICLE_CLOUDS = 5,
+  PARTICLE_OFF = 6
 };
 ParticleStyle currentParticleStyle = PARTICLE_SPARKLES;
 
@@ -233,6 +234,17 @@ void drawLivingCanvas() {
       int px = (int)((i * 33 + (t / 15)) % 126);
       int py = (int)((t / 10 + i * 12) % 43);
       display.drawLine(px, py, px - 1, py + 2, SSD1306_WHITE);
+    }
+  } else if (currentParticleStyle == PARTICLE_CLOUDS) {
+    for (int i = 0; i < 2; i++) {
+      int cx = (int)((t / (50 + i * 25) + i * 65) % 150) - 15;
+      int cy = 11 + i * 18;
+      if (cy >= 4 && cy <= 42) {
+        display.drawCircle(cx - 3, cy, 3, SSD1306_WHITE);
+        display.drawCircle(cx + 3, cy, 3, SSD1306_WHITE);
+        display.drawCircle(cx, cy - 2, 4, SSD1306_WHITE);
+        display.drawLine(cx - 6, cy + 3, cx + 6, cy + 3, SSD1306_WHITE);
+      }
     }
   }
 }
@@ -665,9 +677,11 @@ void drawProgressiveBow(int cx, int cy, float progress) {
 
 void drawProgressiveCloud(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
-  display.drawCircle(cx - 2, cy - 1, 3, SSD1306_WHITE);
-  display.drawCircle(cx + 3, cy, 2, SSD1306_WHITE);
-  display.drawLine(cx - 5, cy + 2, cx + 5, cy + 2, SSD1306_WHITE);
+  display.drawCircle(cx - 4, cy + 1, 3, SSD1306_WHITE);
+  display.drawCircle(cx + 4, cy + 1, 3, SSD1306_WHITE);
+  display.drawCircle(cx - 1, cy - 2, 4, SSD1306_WHITE);
+  display.drawCircle(cx + 2, cy - 1, 3, SSD1306_WHITE);
+  display.drawLine(cx - 7, cy + 4, cx + 7, cy + 4, SSD1306_WHITE);
 }
 
 void drawProgressiveCherry(int cx, int cy, float progress) {
@@ -1188,21 +1202,21 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
   String comp = s.composition;
   if (comp == "MONOLITH" && (hasPrefix || hasSuffix)) comp = "CENTER";
 
-  // Strict 128x48 Blue Zone Vertical Alignment (Ample spacing, zero overlap)
-  int prefixY = 10 + yOffset;
-  int focalY = 25 + yOffset;
+  // Strict 128x48 Blue Zone Vertical Alignment (Natural, cohesive line heights)
+  int prefixY = 11 + yOffset;
+  int focalY = 26 + yOffset;
   int suffixY = 41 + yOffset;
 
   if (hasPrefix && hasFocal && hasSuffix) {
-    prefixY = 10 + yOffset;
-    focalY = 25 + yOffset;
+    prefixY = 11 + yOffset;
+    focalY = 26 + yOffset;
     suffixY = 41 + yOffset;
   } else if (hasPrefix && hasFocal && !hasSuffix) {
-    prefixY = 12 + yOffset;
-    focalY = 36 + yOffset;
+    prefixY = 17 + yOffset;
+    focalY = 34 + yOffset;
   } else if (!hasPrefix && hasFocal && hasSuffix) {
-    focalY = 15 + yOffset;
-    suffixY = 39 + yOffset;
+    focalY = 17 + yOffset;
+    suffixY = 34 + yOffset;
   } else if (!hasPrefix && hasFocal && !hasSuffix) {
     focalY = 28 + yOffset; // Perfectly centered vertically!
   }
@@ -1478,6 +1492,7 @@ void parseSerialData(String data) {
     else if (pCode == "STARS") currentParticleStyle = PARTICLE_STARS;
     else if (pCode == "BUBBLES") currentParticleStyle = PARTICLE_BUBBLES;
     else if (pCode == "RAIN") currentParticleStyle = PARTICLE_RAIN;
+    else if (pCode == "CLOUDS") currentParticleStyle = PARTICLE_CLOUDS;
     else if (pCode == "OFF") currentParticleStyle = PARTICLE_OFF;
     else currentParticleStyle = PARTICLE_SPARKLES;
   }
