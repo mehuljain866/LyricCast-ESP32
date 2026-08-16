@@ -1241,27 +1241,27 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     availWidth = 119;
   }
 
-  // Font Preset Selection (Matches Song Genre & Energy Profile!)
+  // Font Preset Selection (Locked per-song, 100% unified font family across all 3 segments!)
   int prefixFont = 3, focalFont = 0, suffixFont = 3;
   if (currentFontStyle == FONT_ANIMATED || currentFontStyle == FONT_MIX) {
     switch (s.fontPreset % 8) {
-      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;  // Indie / Chill / Ballad (Cursive Italic 9 + Bold Cursive 12)
-      case 1: prefixFont = 4; focalFont = 1; suffixFont = 6; break;  // Pop / Anthem / High Energy (Sans 9 + Bold Sans 12 + Oblique 9)
-      case 2: prefixFont = 3; focalFont = 2; suffixFont = 8; break;  // R&B / Soul / Romantic (Serif Italic 9 + Serif Bold 12 + Serif Bold 9)
-      case 3: prefixFont = 9; focalFont = 14; suffixFont = 5; break; // Hip-Hop / Tech / Cyber (Mono 9 + Mono Bold 12 + Mono Bold 9)
-      case 4: prefixFont = 6; focalFont = 11; suffixFont = 4; break; // Playful / Indie Pop (Oblique 9 + Serif Italic 12 + Sans 9)
-      case 5: prefixFont = 7; focalFont = 10; suffixFont = 7; break; // Modern Clean Anthem (Sans Bold 9 + Sans 12 + Sans Bold 9)
-      case 6: prefixFont = 5; focalFont = 1; suffixFont = 5; break;  // Heavy Rock / Impact (Mono Bold 9 + Bold Sans 12 + Mono Bold 9)
-      case 7: prefixFont = 3; focalFont = 0; suffixFont = 4; break;  // Dreamy Ethereal (Cursive Italic 9 + Bold Cursive 12 + Sans 9)
+      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;  // Unified Cursive Script (FreeSerifItalic9 + FreeSerifBoldItalic12 + FreeSerifItalic9)
+      case 1: prefixFont = 4; focalFont = 1; suffixFont = 4; break;  // Unified Modern Sans (FreeSans9 + FreeSansBold12 + FreeSans9)
+      case 2: prefixFont = 3; focalFont = 2; suffixFont = 3; break;  // Unified Editorial Serif (FreeSerifItalic9 + FreeSerifBold12 + FreeSerifItalic9)
+      case 3: prefixFont = 9; focalFont = 14; suffixFont = 9; break; // Unified Monospace (FreeMono9 + FreeMonoBold12 + FreeMono9)
+      case 4: prefixFont = 7; focalFont = 1; suffixFont = 7; break;  // Unified Bold Sans Display (FreeSansBold9 + FreeSansBold12 + FreeSansBold9)
+      case 5: prefixFont = 3; focalFont = 11; suffixFont = 3; break; // Unified Soft Italic Script (FreeSerifItalic9 + FreeSerifItalic12 + FreeSerifItalic9)
+      case 6: prefixFont = 5; focalFont = 14; suffixFont = 5; break; // Unified Heavy Mono/Arcade (FreeMonoBold9 + FreeMonoBold12 + FreeMonoBold9)
+      case 7: prefixFont = 4; focalFont = 10; suffixFont = 4; break; // Unified Clean Sans Regular (FreeSans9 + FreeSans12 + FreeSans9)
     }
   } else if (currentFontStyle == FONT_SANS) {
     prefixFont = 4; focalFont = 1; suffixFont = 4;
   } else if (currentFontStyle == FONT_SERIF) {
-    prefixFont = 3; focalFont = 2; suffixFont = 8;
+    prefixFont = 3; focalFont = 2; suffixFont = 3;
   } else if (currentFontStyle == FONT_MONO) {
-    prefixFont = 9; focalFont = 14; suffixFont = 5;
+    prefixFont = 9; focalFont = 14; suffixFont = 9;
   } else if (currentFontStyle == FONT_ARCADE) {
-    prefixFont = 5; focalFont = 14; suffixFont = 7;
+    prefixFont = 5; focalFont = 14; suffixFont = 5;
   }
 
   // 1. MONOLITH COMPOSITION (Giant single word)

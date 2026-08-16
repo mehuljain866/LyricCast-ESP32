@@ -219,7 +219,8 @@ async def main():
                 if song_key != current_song:
                     print(f"\nNew song detected: {song_key}")
                     current_song = song_key
-                    director.reset_song(title)
+                    director.set_genre_adaptive(CURRENT_SETTINGS.get('genreAdaptiveFonts', True))
+                    director.reset_song(title, artist)
                     lyrics = []
                     last_sent_text = ""
                     
@@ -239,6 +240,15 @@ async def main():
                     last_metadata_time = now
                     ser.write(f"M|{title}|{artist}|{pos_ms:.0f}|{dur_ms:.0f}\n".encode('utf-8', 'replace'))
 
+                # Sync Genre-Adaptive toggle to director
+                genre_adapt = CURRENT_SETTINGS.get('genreAdaptiveFonts', True)
+                director.set_genre_adaptive(genre_adapt)
+
+                # Map manual font selection if genreAdaptive is off
+                font_map = {'animated': 0, 'sans': 1, 'serif': 2, 'mono': 3, 'arcade': 6, 'mix': 0}
+                current_font = CURRENT_SETTINGS.get('font', 'animated')
+                director.set_default_font_preset(font_map.get(current_font, 0))
+
                 # Send song info layout updates if changed (2-Line static vs Marquee)
                 current_info_layout = CURRENT_SETTINGS.get('songInfoLayout', 'twoline')
                 if current_info_layout != last_sent_info_layout:
@@ -248,14 +258,13 @@ async def main():
                         ser.write(f"I|MARQUEE\n".encode('utf-8', 'replace'))
                     last_sent_info_layout = current_info_layout
 
-                # Send particle style updates if changed (Sparkles, Dust, Stars, Bubbles, Rain, Off)
+                # Send particle style updates if changed (Sparkles, Dust, Stars, Bubbles, Rain, Clouds, Off)
                 current_particles = CURRENT_SETTINGS.get('particleStyle', 'sparkles')
                 if current_particles != last_sent_particles:
                     ser.write(f"P|{current_particles.upper()}\n".encode('utf-8', 'replace'))
                     last_sent_particles = current_particles
 
                 # Send font updates if changed
-                current_font = CURRENT_SETTINGS.get('font', 'mix')
                 if current_font != last_sent_font:
                     ser.write(f"F|{current_font.upper()}\n".encode('utf-8', 'replace'))
                     last_sent_font = current_font

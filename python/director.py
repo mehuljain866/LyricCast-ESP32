@@ -106,6 +106,15 @@ class LyricDirector:
         self.last_composition = ""
         self.song_genre = "INDIE"
         self.base_energy = 3 # 1 (mellow/ballad) to 5 (explosive/rock)
+        self.genre_adaptive = True
+        self.default_font_preset = 0 # 0=Classic Animated Cursive
+        self.song_font_preset = 0
+
+    def set_genre_adaptive(self, enabled: bool):
+        self.genre_adaptive = enabled
+
+    def set_default_font_preset(self, preset: int):
+        self.default_font_preset = preset
 
     def reset_song(self, song_title, artist=""):
         self.chorus_counts = {}
@@ -136,6 +145,21 @@ class LyricDirector:
         else:
             self.base_energy = 3
 
+        # Lock ONE unified typographic theme for this entire song!
+        if self.genre_adaptive:
+            if self.song_genre == 'ROCK':
+                self.song_font_preset = 4 # Unified Bold Sans
+            elif self.song_genre == 'HIPHOP':
+                self.song_font_preset = 3 # Unified Monospace
+            elif self.song_genre in ['POP', 'ELECTRONIC']:
+                self.song_font_preset = 1 # Unified Modern Sans
+            elif self.song_genre == 'RB_SOUL':
+                self.song_font_preset = 2 # Unified Editorial Serif
+            else: # INDIE / Alternative (Sweater Weather, Dominic Fike, Malcolm Todd)
+                self.song_font_preset = 0 # Unified Cursive Script
+        else:
+            self.song_font_preset = self.default_font_preset
+
         seed_str = f"{song_title}-{artist}"
         hash_val = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest()[:8], 16)
         self.current_seed = hash_val & 0xFFFFFFFF
@@ -155,7 +179,7 @@ class LyricDirector:
                 "metaphor": "IDLE",
                 "doodle": "NONE",
                 "composition": "CENTER",
-                "font_preset": 0,
+                "font_preset": self.song_font_preset,
                 "fx_flags": 0,
                 "has_underline": False,
                 "tilt_angle": 0,
@@ -276,28 +300,8 @@ class LyricDirector:
             
         has_underline = (detected_doodle == "UNDERLINE" or (random.random() < 0.18 and detected_doodle in ["NONE", "NOTE"])) and len(focal_word) > 2
 
-        # 8. Genre & Energy-Reactive Font Preset Selection
-        # Presets:
-        # 0: Indie/Chill/Acoustic (Serif Italic + Bold Italic)
-        # 1: Pop/Anthem/Bold (Sans + Bold Sans 12)
-        # 2: R&B/Ballad/Romantic (Serif Italic + Bold Serif 12)
-        # 3: Tech/Hip-Hop/Cyber (Mono + Bold Mono 12)
-        # 4: Playful/Upbeat Pop (Sans Oblique + Serif Italic 12)
-        # 5: Modern Clean/Anthem (Bold Sans 9 + Sans 12)
-        # 6: Heavy Impact/Rock (Mono Bold 9 + Bold Sans 12)
-        # 7: Dreamy/Ethereal (Serif Italic 9 + Bold Italic 12 + Sans 9)
-        if self.song_genre == 'ROCK':
-            font_preset = random.choice([1, 5, 6]) if line_energy >= 4 else random.choice([0, 1, 6])
-        elif self.song_genre == 'HIPHOP':
-            font_preset = random.choice([3, 5, 6])
-        elif self.song_genre == 'POP':
-            font_preset = random.choice([1, 4, 5]) if line_energy >= 3 else random.choice([0, 4, 7])
-        elif self.song_genre == 'RB_SOUL':
-            font_preset = random.choice([0, 2, 7])
-        elif self.song_genre == 'ELECTRONIC':
-            font_preset = random.choice([1, 3, 5])
-        else: # INDIE / Alternative
-            font_preset = random.choice([0, 4, 7]) if line_energy <= 3 else random.choice([0, 1, 4, 7])
+        # 8. Consistent Locked Font Preset for Entire Song (Zero mid-song font jumps!)
+        font_preset = self.song_font_preset
 
         # Responsive Snappy Timing
         line_duration_ms = max(800, int(duration * 1000))
