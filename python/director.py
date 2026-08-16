@@ -44,7 +44,7 @@ DOODLE_MAP = {
     'lightning': ['lightning', 'electric', 'shock', 'strike', 'thunder', 'power', 'flash', 'energy', 'zap', 'voltage'],
     'eye': ['eye', 'eyes', 'look', 'looking', 'see', 'seeing', 'watch', 'stare', 'gaze', 'blind', 'sight', 'view'],
     'clock': ['time', 'clock', 'hours', 'late', 'seconds', 'minutes', 'years', 'forever', 'tick', 'ticking', 'wait', 'waiting'],
-    'coffee': ['coffee', 'tea', 'cup', 'wake', 'drink', 'warm', 'cafe', 'mug'],
+    'coffee': ['coffee', 'tea', 'cup', 'wake', 'drink', 'warm', 'cafe', 'mug', 'espresso', 'cappuccino', 'latte', 'caffeine'],
     'ghost': ['ghost', 'ghosts', 'haunt', 'haunted', 'dead', 'spooky', 'fade', 'fading', 'disappear', 'vanish'],
     'crown': ['crown', 'king', 'queen', 'prince', 'princess', 'royal', 'royalty', 'rule', 'ruling', 'boss', 'champ', 'throne'],
     'diamond': ['diamond', 'diamonds', 'gem', 'gems', 'rich', 'wealth', 'jewel', 'precious', 'crystal'],
@@ -76,8 +76,8 @@ DOODLE_MAP = {
     'bow': ['cupid', 'bow', 'archery'],
     'bubble': ['think', 'thinking', 'thought', 'thoughts', 'say', 'saying', 'speak', 'words', 'tell', 'whisper'],
     'box': ['name', 'title', 'brand', 'label', 'tag', 'number', 'one', 'best', 'legend'],
-    'circle': ['everything', 'world', 'whole', 'complete', 'around', 'orbit'],
-    'arrow': ['point', 'straight', 'direct', 'ahead', 'direction']
+    'circle': ['all', 'everything', 'world', 'whole', 'complete', 'around'],
+    'arrow': ['point', 'pointing', 'straight', 'direct', 'direction', 'target', 'aim', 'arrow']
 }
 
 # Genre & Energy Profiles for Intelligent Typographic Styling
@@ -94,18 +94,15 @@ STOP_WORDS = {
     'a', 'an', 'the', 'and', 'or', 'but', 'if', 'in', 'on', 'at', 'to', 'for', 'with', 'by',
     'about', 'as', 'into', 'like', 'through', 'after', 'over', 'between', 'out', 'against',
     'during', 'without', 'before', 'under', 'around', 'among', 'is', 'am', 'are', 'was', 'were',
-    'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'that', 'this', 'it', 'its',
-    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself',
-    'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'they', 'them', 'their', 'theirs',
-    'what', 'which', 'who', 'whom', 'whose', 'when', 'where', 'why', 'how', 'all', 'any', 'both',
-    'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own',
-    'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now', 'there', 'here',
-    'ill', "i'll", 'youll', "you'll", 'theyll', "they'll", 'well', "we'll", 'im', "i'm", 'youre', "you're",
-    'were', "we're", 'theyre', "they're", 'ive', "i've", 'youve', "you've", 'weve', "we've",
-    'id', "i'd", 'youd', "you'd", 'hed', "he'd", 'shed', "she'd", 'wed', "we'd",
-    'dont', "don't", 'wont', "won't", 'cant', "can't", 'isnt', "isn't", 'arent', "aren't",
-    'wasnt', "wasn't", 'werent', "weren't", 'hasnt', "hasn't", 'havent', "haven't",
-    'couldnt', "couldn't", 'shouldnt', "shouldn't", 'wouldnt', "wouldn't", 'gotta', 'gonna', 'wanna'
+    'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing',
+    'that', 'this', 'these', 'those', 'it', 'its', 'i', 'me', 'my', 'myself', 'we', 'us', 'our', 'ours',
+    'you', 'your', 'yours', 'yourself', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself',
+    'they', 'them', 'their', 'theirs', 'what', 'which', 'who', 'whom', 'whose', 'where', 'when', 'why', 'how',
+    'would', 'should', 'could', 'can', 'will', 'shall', 'may', 'might', 'must', 'ought',
+    'just', 'now', 'then', 'so', 'too', 'very', 'than', 'more', 'most', 'some', 'any', 'all', 'both', 'each',
+    'no', 'nor', 'not', 'only', 'own', 'same', 'such', 'oh', 'yeah', 'ooh', 'ah', 'la', 'na', 'hey', 'whoa',
+    'im', 'youre', 'hes', 'shes', 'its', 'were', 'theyre', 'ive', 'youve', 'weve', 'theyve',
+    'dont', 'doesnt', 'didnt', 'wont', 'wouldnt', 'cant', 'couldnt', 'isnt', 'arent', 'wasnt', 'werent'
 }
 
 class LyricDirector:
@@ -223,55 +220,52 @@ class LyricDirector:
 
         self.last_doodle = detected_doodle
 
-        # 3. Typographic Hierarchy (Vivid Emotional & Content Focal Word Selection)
+        # 3. Typographic Hierarchy (Vibrant Semantic Hero Word Selection)
         focal_index = -1
         max_score = -9999.0
 
         for idx, w in enumerate(words):
             clean_w = re.sub(r'[^\w]', '', w).lower()
-            if len(clean_w) == 0:
+            if w.lower() in ["i'll", "you'll", "we'll", "they'll", "he'll", "she'll"]:
+                clean_w = "will"
+            if clean_w in STOP_WORDS and len(words) > 1:
                 continue
             
-            is_stop = clean_w in STOP_WORDS
+            # Base content score by word length & semantic richness
+            score = len(clean_w) * 2.5
             
-            if is_stop:
-                score = 1.0 # Low baseline for stop words
-            else:
-                # Real content words get strong baseline proportional to length and vividness
-                score = 15.0 + len(clean_w) * 2.5
+            # Massive bonus for semantic doodle matches (brings the visual storyboard alive!)
+            if detected_doodle != "NONE" and clean_w in DOODLE_MAP.get(detected_doodle.lower(), []):
+                score += 40.0
             
-            # Semantic Doodle Match (+35 for high-impact visual match!)
-            if detected_doodle != "NONE" and clean_w in DOODLE_MAP.get(detected_doodle.lower(), []) and not is_stop:
-                score += 35.0
-            
-            # Motion Metaphor Match (+25)
-            if detected_metaphor != "NORMAL" and clean_w in METAPHORS.get(detected_metaphor.lower(), []) and not is_stop:
+            # High bonus for motion metaphor matches
+            if detected_metaphor != "NORMAL" and clean_w in METAPHORS.get(detected_metaphor.lower(), []):
                 score += 25.0
-                
-            # Proper Noun / Capitalized word (+15)
-            if w.isupper() and len(clean_w) > 1:
+            
+            # Proper nouns / Capitalized content words (e.g. California, Miami)
+            if w[0].isupper() and len(clean_w) > 2 and idx > 0:
+                score += 20.0
+            elif w.isupper() and len(clean_w) > 1:
                 score += 15.0
-            elif w[0].isupper() and idx > 0 and not is_stop:
-                score += 12.0
             
-            # Line length balancing (gentle guidance so extreme lines don't overflow)
-            prefix_cand = " ".join(words[:idx])
-            suffix_cand = " ".join(words[idx + 1:])
-            if len(prefix_cand) > 18:
-                score -= (len(prefix_cand) - 18) * 3.0
-            if len(suffix_cand) > 18:
-                score -= (len(suffix_cand) - 18) * 3.0
-            
-            # Subtle position centering preference (+4)
+            # Gentle balance tie-breaker (+2.0 max, never overrides real semantic words)
             center_ratio = 1.0 - (abs(idx - (len(words) - 1) / 2.0) / max(1, (len(words) - 1) / 2.0))
-            score += center_ratio * 4.0
+            score += center_ratio * 2.0
 
             if score > max_score:
                 max_score = score
                 focal_index = idx
 
+        # Fallback if all words were stop words (e.g. "All I am is"):
         if focal_index == -1:
-            focal_index = len(words) // 2
+            longest_len = 0
+            for idx, w in enumerate(words):
+                clean_w = re.sub(r'[^\w]', '', w)
+                if len(clean_w) > longest_len:
+                    longest_len = len(clean_w)
+                    focal_index = idx
+            if focal_index == -1:
+                focal_index = len(words) // 2
 
         focal_word = words[focal_index] if 0 <= focal_index < len(words) else ""
         prefix_words = words[:focal_index]
