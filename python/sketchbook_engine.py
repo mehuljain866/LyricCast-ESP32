@@ -4,9 +4,6 @@ Procedural hand-drawn vector doodle generator, organic handwriting simulator,
 and scene serializer for ESP32 and Web Live Canvas.
 """
 
-import math
-import random
-
 class SketchbookEngine:
     def __init__(self):
         pass
@@ -14,7 +11,7 @@ class SketchbookEngine:
     @staticmethod
     def format_esp32_packet(scene):
         """Formats a structured scene packet for the ESP32 Serial protocol."""
-        # Protocol: K|<metaphor>|<doodle>|<composition>|<focal>|<prefix>|<suffix>|<tilt>|<underline>|<durationMs>
+        # Protocol: K|<metaphor>|<doodle>|<composition>|<focal>|<prefix>|<suffix>|<tilt>|<underline>|<durationMs>|<fontPreset>
         prefix = scene.get('prefix', '').replace('|', '/')
         focal = scene.get('focal_word', '').replace('|', '/')
         suffix = scene.get('suffix', '').replace('|', '/')
@@ -24,6 +21,7 @@ class SketchbookEngine:
         tilt = scene.get('tilt_angle', 0)
         underline = 1 if scene.get('has_underline') else 0
         duration_ms = scene.get('duration_ms', 3000)
+        font_preset = scene.get('font_preset', 0)
         
-        packet = f"K|{metaphor}|{doodle}|{composition}|{focal}|{prefix}|{suffix}|{tilt}|{underline}|{duration_ms}\n"
+        packet = f"K|{metaphor}|{doodle}|{composition}|{focal}|{prefix}|{suffix}|{tilt}|{underline}|{duration_ms}|{font_preset}\n"
         return packet
