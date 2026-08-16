@@ -76,8 +76,8 @@ DOODLE_MAP = {
     'bow': ['cupid', 'bow', 'archery'],
     'bubble': ['think', 'thinking', 'thought', 'thoughts', 'say', 'saying', 'speak', 'words', 'tell', 'whisper'],
     'box': ['name', 'title', 'brand', 'label', 'tag', 'number', 'one', 'best', 'legend'],
-    'circle': ['all', 'everything', 'world', 'whole', 'complete', 'around'],
-    'arrow': ['you', 'me', 'her', 'him', 'them', 'there', 'here', 'point', 'straight', 'direct']
+    'circle': ['everything', 'world', 'whole', 'complete', 'around', 'orbit'],
+    'arrow': ['point', 'straight', 'direct', 'ahead', 'direction']
 }
 
 # Genre & Energy Profiles for Intelligent Typographic Styling
@@ -94,7 +94,18 @@ STOP_WORDS = {
     'a', 'an', 'the', 'and', 'or', 'but', 'if', 'in', 'on', 'at', 'to', 'for', 'with', 'by',
     'about', 'as', 'into', 'like', 'through', 'after', 'over', 'between', 'out', 'against',
     'during', 'without', 'before', 'under', 'around', 'among', 'is', 'am', 'are', 'was', 'were',
-    'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'that', 'this', 'it'
+    'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'that', 'this', 'it', 'its',
+    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself',
+    'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'they', 'them', 'their', 'theirs',
+    'what', 'which', 'who', 'whom', 'whose', 'when', 'where', 'why', 'how', 'all', 'any', 'both',
+    'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own',
+    'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now', 'there', 'here',
+    'ill', "i'll", 'youll', "you'll", 'theyll', "they'll", 'well', "we'll", 'im', "i'm", 'youre', "you're",
+    'were', "we're", 'theyre', "they're", 'ive', "i've", 'youve', "you've", 'weve', "we've",
+    'id', "i'd", 'youd', "you'd", 'hed', "he'd", 'shed', "she'd", 'wed', "we'd",
+    'dont', "don't", 'wont', "won't", 'cant', "can't", 'isnt', "isn't", 'arent', "aren't",
+    'wasnt', "wasn't", 'werent', "weren't", 'hasnt', "hasn't", 'havent', "haven't",
+    'couldnt', "couldn't", 'shouldnt', "shouldn't", 'wouldnt', "wouldn't", 'gotta', 'gonna', 'wanna'
 }
 
 class LyricDirector:
@@ -212,34 +223,48 @@ class LyricDirector:
 
         self.last_doodle = detected_doodle
 
-        # 3. Typographic Hierarchy (Focal Word Selection with Balanced Length Splitting)
+        # 3. Typographic Hierarchy (Vivid Emotional & Content Focal Word Selection)
         focal_index = -1
         max_score = -9999.0
 
         for idx, w in enumerate(words):
             clean_w = re.sub(r'[^\w]', '', w).lower()
-            if clean_w in STOP_WORDS and len(words) > 3:
+            if len(clean_w) == 0:
                 continue
             
-            score = len(clean_w) * 1.5
-            if detected_metaphor != "NORMAL" and clean_w in METAPHORS.get(detected_metaphor.lower(), []):
-                score += 15.0
-            if detected_doodle != "NONE" and clean_w in DOODLE_MAP.get(detected_doodle.lower(), []):
-                score += 20.0
-            if w.isupper() and len(clean_w) > 1:
-                score += 10.0
+            is_stop = clean_w in STOP_WORDS
             
-            # Line length balancing: heavily penalize unbalanced splits where prefix or suffix exceeds 20 characters!
+            if is_stop:
+                score = 1.0 # Low baseline for stop words
+            else:
+                # Real content words get strong baseline proportional to length and vividness
+                score = 15.0 + len(clean_w) * 2.5
+            
+            # Semantic Doodle Match (+35 for high-impact visual match!)
+            if detected_doodle != "NONE" and clean_w in DOODLE_MAP.get(detected_doodle.lower(), []) and not is_stop:
+                score += 35.0
+            
+            # Motion Metaphor Match (+25)
+            if detected_metaphor != "NORMAL" and clean_w in METAPHORS.get(detected_metaphor.lower(), []) and not is_stop:
+                score += 25.0
+                
+            # Proper Noun / Capitalized word (+15)
+            if w.isupper() and len(clean_w) > 1:
+                score += 15.0
+            elif w[0].isupper() and idx > 0 and not is_stop:
+                score += 12.0
+            
+            # Line length balancing (gentle guidance so extreme lines don't overflow)
             prefix_cand = " ".join(words[:idx])
             suffix_cand = " ".join(words[idx + 1:])
-            if len(prefix_cand) > 20:
-                score -= (len(prefix_cand) - 20) * 3.0
-            if len(suffix_cand) > 20:
-                score -= (len(suffix_cand) - 20) * 3.0
+            if len(prefix_cand) > 22:
+                score -= (len(prefix_cand) - 22) * 1.5
+            if len(suffix_cand) > 22:
+                score -= (len(suffix_cand) - 22) * 1.5
             
-            # Central balance bonus (rewards words near middle so lines split evenly)
+            # Subtle position centering preference (+4)
             center_ratio = 1.0 - (abs(idx - (len(words) - 1) / 2.0) / max(1, (len(words) - 1) / 2.0))
-            score += center_ratio * 12.0
+            score += center_ratio * 4.0
 
             if score > max_score:
                 max_score = score
