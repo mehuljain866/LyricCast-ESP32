@@ -309,7 +309,7 @@ async def main():
                     if current_mode == 'sketchbook':
                         if current_lyric != last_sent_text:
                             last_sent_text = current_lyric
-                            line_duration = max(1.5, next_lyric_time - current_lyric_time)
+                            line_duration = max(0.8, next_lyric_time - current_lyric_time)
                             scene = director.analyze_line(current_lyric, duration=line_duration, song_position=position_s)
                             scene['title'] = title
                             scene['artist'] = artist

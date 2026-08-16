@@ -147,9 +147,10 @@ const GFXfont* getFontByChoice(int choice) {
   }
 }
 
+// Snappy Progressive Text (Full reveal within 250ms flat)
 void drawProgressiveText(String text, int x, int y, int fontChoice, float progress) {
   if (text.length() == 0 || progress <= 0.0f) return;
-  int visibleChars = max(1, (int)(text.length() * min(1.0f, progress * 2.2f)));
+  int visibleChars = max(1, (int)(text.length() * min(1.0f, progress * 4.5f)));
   String sub = text.substring(0, visibleChars);
   
   const GFXfont* f = getFontByChoice(fontChoice);
@@ -221,6 +222,47 @@ void drawLivingCanvas() {
 // ==========================================
 // 50+ PROCEDURAL VECTOR DOODLE ARSENAL
 // ==========================================
+
+// Classic Vintage Telephone Receiver & Cord
+void drawProgressiveTelephone(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  // Handset bridge
+  display.drawLine(cx - 5, cy - 2, cx + 5, cy - 2, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy - 1, cx + 4, cy - 1, SSD1306_WHITE);
+  // Left earpiece bell
+  display.drawCircle(cx - 5, cy + 1, 2, SSD1306_WHITE);
+  // Right mouthpiece bell
+  display.drawCircle(cx + 5, cy + 1, 2, SSD1306_WHITE);
+  // Curled cord
+  if (progress > 0.4f) {
+    display.drawPixel(cx, cy + 2, SSD1306_WHITE);
+    display.drawPixel(cx + 1, cy + 3, SSD1306_WHITE);
+    display.drawPixel(cx, cy + 4, SSD1306_WHITE);
+    display.drawPixel(cx - 1, cy + 5, SSD1306_WHITE);
+  }
+}
+
+// Context-Aware Directional Arrows
+void drawProgressiveDownArrow(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx, cy - 5, cx, cy + 3, SSD1306_WHITE);
+  display.drawLine(cx - 3, cy, cx, cy + 3, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy, cx, cy + 3, SSD1306_WHITE);
+}
+
+void drawProgressiveUpArrow(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx, cy + 4, cx, cy - 4, SSD1306_WHITE);
+  display.drawLine(cx - 3, cy - 1, cx, cy - 4, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy - 1, cx, cy - 4, SSD1306_WHITE);
+}
+
+void drawProgressiveLeftArrow(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx + 4, cy, cx - 4, cy, SSD1306_WHITE);
+  display.drawLine(cx - 1, cy - 3, cx - 4, cy, SSD1306_WHITE);
+  display.drawLine(cx - 1, cy + 3, cx - 4, cy, SSD1306_WHITE);
+}
 
 void drawProgressiveHouse(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
@@ -523,12 +565,6 @@ void drawProgressiveCandle(int cx, int cy, float progress, unsigned long time) {
   display.drawPixel(cx + ((time/100)%2==0?0:1), cy - 4, SSD1306_WHITE);
 }
 
-void drawProgressivePhone(int cx, int cy, float progress) {
-  if (progress <= 0.0f) return;
-  display.drawRect(cx - 3, cy - 5, 6, 10, SSD1306_WHITE);
-  display.drawPixel(cx, cy + 3, SSD1306_WHITE);
-}
-
 void drawProgressivePill(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   display.drawRect(cx - 5, cy - 2, 10, 4, SSD1306_WHITE);
@@ -734,7 +770,11 @@ void drawCornerFrames(float progress) {
 }
 
 void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now) {
-  if (doodle == "HOME") drawProgressiveHouse(cx, cy, progress);
+  if (doodle == "PHONE") drawProgressiveTelephone(cx, cy, progress);
+  else if (doodle == "DOWN") drawProgressiveDownArrow(cx, cy, progress);
+  else if (doodle == "UP") drawProgressiveUpArrow(cx, cy, progress);
+  else if (doodle == "LEFT") drawProgressiveLeftArrow(cx, cy, progress);
+  else if (doodle == "HOME") drawProgressiveHouse(cx, cy, progress);
   else if (doodle == "GUN") drawProgressiveGun(cx, cy, progress);
   else if (doodle == "EARRING") drawProgressiveEarring(cx, cy, progress);
   else if (doodle == "ROSE") drawProgressiveRose(cx, cy, progress);
@@ -765,7 +805,6 @@ void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now
   else if (doodle == "PLANET") drawProgressivePlanet(cx, cy, progress);
   else if (doodle == "LEAF") drawProgressiveLeaf(cx, cy, progress);
   else if (doodle == "CANDLE") drawProgressiveCandle(cx, cy, progress, now);
-  else if (doodle == "PHONE") drawProgressivePhone(cx, cy, progress);
   else if (doodle == "PILL") drawProgressivePill(cx, cy, progress);
   else if (doodle == "GLASSES") drawProgressiveGlasses(cx, cy, progress);
   else if (doodle == "SKULL") drawProgressiveSkull(cx, cy, progress);
@@ -795,7 +834,7 @@ String sketchPrefix = "";
 String sketchSuffix = "";
 int sketchTilt = 0;
 bool sketchUnderline = false;
-uint32_t sketchDurationMs = 3000;
+uint32_t sketchDurationMs = 2500;
 unsigned long sketchSceneStartMs = 0;
 int sketchFontPreset = 0;
 int sketchFxFlags = 0;
@@ -1113,7 +1152,7 @@ void drawParticles() {
 }
 
 // ==========================================
-// PROCEDURAL SKETCHBOOK SCENE ENGINE (Dynamic Center Alignment)
+// PROCEDURAL SKETCHBOOK SCENE ENGINE (Dynamic Center Alignment & Auto-Fit)
 // ==========================================
 void drawSketchbookScene() {
   unsigned long now = millis();
@@ -1121,7 +1160,7 @@ void drawSketchbookScene() {
   float rawProgress = (sketchDurationMs > 0) ? ((float)elapsed / sketchDurationMs) : 1.0f;
   if (rawProgress > 1.0f) rawProgress = 1.0f;
   
-  float enterT = min(1.0f, rawProgress * 2.5f);
+  float enterT = min(1.0f, rawProgress * 3.5f);
   float enterEased = easeOutBack(enterT);
   
   int minX = 2;
@@ -1217,6 +1256,11 @@ void drawSketchbookScene() {
       focalFont = 1; // Step down to 12pt
       display.setFont(&FreeSansBold12pt7b);
       display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+      if (fw > availWidth) {
+        focalFont = 7; // Step down to 9pt
+        display.setFont(&FreeSansBold9pt7b);
+        display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+      }
     }
     int fx = minX + (availWidth - (int)fw) / 2;
     int fy = 30 + (int)breathe;
@@ -1298,6 +1342,20 @@ void drawSketchbookScene() {
     display.setFont(pFont);
     int16_t x1, y1; uint16_t pw, ph;
     display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
+    
+    // Auto Step-Down Font if text is too wide (Zero Cutoff!)
+    if (pw > availWidth) {
+      prefixFont = 4; // Sans 9pt
+      pFont = getFontByChoice(prefixFont);
+      display.setFont(pFont);
+      display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
+      if (pw > availWidth) {
+        prefixFont = -1; // 6x8 system font
+        display.setFont(NULL);
+        pw = sketchPrefix.length() * 6;
+      }
+    }
+    
     int px = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
     drawProgressiveText(sketchPrefix, max(minX, px), prefixY, prefixFont, rawProgress);
   }
@@ -1313,6 +1371,11 @@ void drawSketchbookScene() {
       fFont = getFontByChoice(focalFont);
       display.setFont(fFont);
       display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+      if (fw > availWidth) {
+        focalFont = -1;
+        display.setFont(NULL);
+        fw = sketchFocalWord.length() * 6;
+      }
     }
     
     int fx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2 + focalXOffset;
@@ -1321,7 +1384,11 @@ void drawSketchbookScene() {
     // EXACT INVERSE BADGE MATH (Zero Clipping on 128x48!)
     if (sketchFxFlags & 1) {
       int16_t bx, by; uint16_t bw, bh;
-      display.getTextBounds(sketchFocalWord, fx, focalY, &bx, &by, &bw, &bh);
+      if (focalFont >= 0) {
+        display.getTextBounds(sketchFocalWord, fx, focalY, &bx, &by, &bw, &bh);
+      } else {
+        bx = fx; by = focalY - 8; bw = fw; bh = 9;
+      }
       display.fillRect(bx - 3, by - 2, bw + 6, bh + 4, SSD1306_WHITE);
       display.setTextColor(SSD1306_BLACK);
       drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
@@ -1371,6 +1438,19 @@ void drawSketchbookScene() {
     display.setFont(sFont);
     int16_t x1, y1; uint16_t sw, sh;
     display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
+    
+    if (sw > availWidth) {
+      suffixFont = 4; // Sans 9pt
+      sFont = getFontByChoice(suffixFont);
+      display.setFont(sFont);
+      display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
+      if (sw > availWidth) {
+        suffixFont = -1; // 6x8 system font
+        display.setFont(NULL);
+        sw = sketchSuffix.length() * 6;
+      }
+    }
+    
     int sx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
     drawProgressiveText(sketchSuffix, max(minX, sx), suffixY, suffixFont, rawProgress);
   }
