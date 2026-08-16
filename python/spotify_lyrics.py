@@ -59,20 +59,7 @@ async def get_media_info():
             playback = current_session.get_playback_info()
             if info and timeline and playback:
                 is_playing = (playback.playback_status == 4)
-                base_pos_s = timeline.position.total_seconds()
-                last_updated = timeline.last_updated_time
-                
-                if last_updated and is_playing:
-                    now_utc = datetime.now(timezone.utc)
-                    delta = (now_utc - last_updated).total_seconds()
-                    if 0.0 <= delta < 10.0:
-                        exact_pos_s = base_pos_s + delta
-                    else:
-                        exact_pos_s = base_pos_s
-                else:
-                    exact_pos_s = base_pos_s
-
-                pos_ms = exact_pos_s * 1000.0
+                pos_ms = timeline.position.total_seconds() * 1000.0
                 dur_ms = timeline.end_time.total_seconds() * 1000.0
                 return info.title, info.artist, pos_ms, dur_ms, is_playing
     except Exception:
