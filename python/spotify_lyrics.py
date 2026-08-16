@@ -1,5 +1,6 @@
 import asyncio
 import time
+from datetime import datetime, timezone
 import serial
 import serial.tools.list_ports
 import syncedlyrics
@@ -14,7 +15,7 @@ from winsdk.windows.media.control import GlobalSystemMediaTransportControlsSessi
 from director import LyricDirector
 from sketchbook_engine import SketchbookEngine
 
-SYNC_OFFSET_SECONDS = 0.20
+SYNC_OFFSET_SECONDS = 0.0
 
 director = LyricDirector()
 sketchbook = SketchbookEngine()
@@ -49,17 +50,33 @@ def find_esp32_port():
     return "COM5" 
 
 async def get_media_info():
-    sessions = await MediaManager.request_async()
-    current_session = sessions.get_current_session()
-    if current_session:
-        info = await current_session.try_get_media_properties_async()
-        timeline = current_session.get_timeline_properties()
-        playback = current_session.get_playback_info()
-        if info and timeline and playback:
-            pos_ms = timeline.position.total_seconds() * 1000
-            dur_ms = timeline.end_time.total_seconds() * 1000
-            is_playing = (playback.playback_status == 4) 
-            return info.title, info.artist, pos_ms, dur_ms, is_playing
+    try:
+        sessions = await MediaManager.request_async()
+        current_session = sessions.get_current_session()
+        if current_session:
+            info = await current_session.try_get_media_properties_async()
+            timeline = current_session.get_timeline_properties()
+            playback = current_session.get_playback_info()
+            if info and timeline and playback:
+                is_playing = (playback.playback_status == 4)
+                base_pos_s = timeline.position.total_seconds()
+                last_updated = timeline.last_updated_time
+                
+                if last_updated and is_playing:
+                    now_utc = datetime.now(timezone.utc)
+                    delta = (now_utc - last_updated).total_seconds()
+                    if 0.0 <= delta < 10.0:
+                        exact_pos_s = base_pos_s + delta
+                    else:
+                        exact_pos_s = base_pos_s
+                else:
+                    exact_pos_s = base_pos_s
+
+                pos_ms = exact_pos_s * 1000.0
+                dur_ms = timeline.end_time.total_seconds() * 1000.0
+                return info.title, info.artist, pos_ms, dur_ms, is_playing
+    except Exception:
+        pass
     return None, None, 0, 1000, False
 
 def parse_lrc(lrc_text):
@@ -186,8 +203,6 @@ async def main():
     lyrics = []
     last_sent_text = ""
     last_metadata_time = 0
-    last_api_pos_ms = 0
-    local_sync_time = time.time()
     last_sent_mode = ""
     last_sent_word_index = -1
     last_sent_font = ""
@@ -201,20 +216,10 @@ async def main():
                     await asyncio.sleep(2)
                     continue
 
-            title, artist, api_pos_ms, dur_ms, is_playing = await get_media_info()
+            title, artist, pos_ms, dur_ms, is_playing = await get_media_info()
             
             if title and artist:
                 song_key = f"{title} - {artist}"
-                
-                if api_pos_ms != last_api_pos_ms:
-                    last_api_pos_ms = api_pos_ms
-                    local_sync_time = time.time()
-                
-                if is_playing:
-                    pos_ms = api_pos_ms + ((time.time() - local_sync_time) * 1000)
-                else:
-                    pos_ms = api_pos_ms
-                    local_sync_time = time.time() 
 
                 if song_key != current_song:
                     print(f"\nNew song detected: {song_key}")
@@ -227,13 +232,16 @@ async def main():
                     ser.write(f"M|{title}|{artist}|{pos_ms:.0f}|{dur_ms:.0f}\n".encode('utf-8', 'replace'))
                     ser.write(f"L|Fetching lyrics...|\n".encode('utf-8', 'replace'))
                     
+                    # Non-blocking async background lyrics download
                     try:
-                        lrc = syncedlyrics.search(f"{title} {artist}")
-                        lyrics = parse_lrc(lrc)
-                        if not lyrics:
-                            ser.write(f"L|No synced lyrics found|\n".encode('utf-8', 'replace'))
+                        lrc = await asyncio.to_thread(syncedlyrics.search, f"{title} {artist}")
+                        if current_song == song_key:
+                            lyrics = parse_lrc(lrc)
+                            if not lyrics:
+                                ser.write(f"L|No synced lyrics found|\n".encode('utf-8', 'replace'))
                     except Exception as e:
-                        ser.write(f"L|Error finding lyrics|\n".encode('utf-8', 'replace'))
+                        if current_song == song_key:
+                            ser.write(f"L|Error finding lyrics|\n".encode('utf-8', 'replace'))
 
                 now = time.time()
                 if now - last_metadata_time > 2.0:
