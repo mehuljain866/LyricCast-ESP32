@@ -1,9 +1,8 @@
 """
-LyricCast Semantic Director & Storyboard Generator (V7 - Context-Aware Semantics & Snappy Pacing)
-Analyzes lyric lines, formats them specifically for the 128x48 Blue OLED zone,
-assigns typographic hierarchy across 16 font styles, 50+ context-aware procedural vector doodles
-(including directional arrows DOWN/UP/LEFT/RIGHT and classic vintage telephone),
-and guarantees zero text clipping and lightning-fast lyric responsiveness.
+LyricCast Semantic Director & Storyboard Generator (V8 - Zero Word Truncation & Precise Lyrics Delivery)
+Analyzes lyric lines, assigns typographic hierarchy across 16 font styles,
+50+ context-aware procedural vector doodles, 8 compositional archetypes,
+and strictly PRESERVES 100% of all sung words (NO skipping, NO truncation).
 """
 
 import re
@@ -108,13 +107,15 @@ class LyricDirector:
 
     def analyze_line(self, line_text, duration=2.5, song_position=0.0):
         clean_text = line_text.strip()
-        words = re.findall(r"[A-Za-z0-9'’]+|[^\w\s]", clean_text)
+        words = clean_text.split()
         
         if not words or clean_text in ["...", "♫", "♥", "★", "☺"]:
             return {
                 "type": "idle",
                 "text": clean_text,
                 "focal_word": "",
+                "prefix": "",
+                "suffix": "",
                 "metaphor": "IDLE",
                 "doodle": "NONE",
                 "composition": "CENTER",
@@ -129,7 +130,8 @@ class LyricDirector:
         detected_metaphor = "NORMAL"
         for meta, triggers in METAPHORS.items():
             for w in words:
-                if w.lower() in triggers:
+                clean_w = re.sub(r'[^\w]', '', w).lower()
+                if clean_w in triggers:
                     detected_metaphor = meta.upper()
                     break
             if detected_metaphor != "NORMAL":
@@ -139,7 +141,8 @@ class LyricDirector:
         detected_doodle = "NONE"
         for doodle_type, triggers in DOODLE_MAP.items():
             for w in words:
-                if w.lower() in triggers:
+                clean_w = re.sub(r'[^\w]', '', w).lower()
+                if clean_w in triggers:
                     cand = doodle_type.upper()
                     if cand != self.last_doodle or len(words) <= 2:
                         detected_doodle = cand
@@ -154,16 +157,16 @@ class LyricDirector:
         max_score = -1
 
         for idx, w in enumerate(words):
-            low_w = w.lower()
-            if low_w in STOP_WORDS or len(w) < 2:
+            clean_w = re.sub(r'[^\w]', '', w).lower()
+            if clean_w in STOP_WORDS or len(clean_w) < 2:
                 continue
             
-            score = len(w) * 1.5
-            if detected_metaphor != "NORMAL" and low_w in METAPHORS.get(detected_metaphor.lower(), []):
+            score = len(clean_w) * 1.5
+            if detected_metaphor != "NORMAL" and clean_w in METAPHORS.get(detected_metaphor.lower(), []):
                 score += 15.0
-            if detected_doodle != "NONE" and low_w in DOODLE_MAP.get(detected_doodle.lower(), []):
+            if detected_doodle != "NONE" and clean_w in DOODLE_MAP.get(detected_doodle.lower(), []):
                 score += 20.0
-            if w.isupper() and len(w) > 1:
+            if w.isupper() and len(clean_w) > 1:
                 score += 10.0
             
             position_bias = (idx / max(1, len(words) - 1)) * 3.0
@@ -180,23 +183,15 @@ class LyricDirector:
         prefix_words = words[:focal_index]
         suffix_words = words[focal_index + 1:] if focal_index + 1 < len(words) else []
 
+        # PRESERVE 100% OF ALL SUNG WORDS (ZERO TRUNCATION!)
         prefix_str = " ".join(prefix_words).strip()
         suffix_str = " ".join(suffix_words).strip()
-
-        # Strict 128px Screen Width Word Balancing (No Cutoffs)
-        if len(prefix_str) > 16:
-            pw = prefix_str.split()
-            prefix_str = " ".join(pw[-2:]) if len(pw) >= 2 else prefix_str[:16]
-
-        if len(suffix_str) > 16:
-            sw = suffix_str.split()
-            suffix_str = " ".join(sw[:2]) if len(sw) >= 2 else suffix_str[:16]
 
         # 4. Rich Compositional Archetypes (8 Archetypes!)
         compositions = ["CENTER", "DIAGONAL", "STACKED", "MONOLITH", "INVERSE", "COMIC", "SPLIT", "DREAMY"]
         
         # Smart assignment based on line characteristics
-        if len(words) <= 2 and len(clean_text) <= 12:
+        if len(words) == 1:
             composition = random.choice(["MONOLITH", "INVERSE", "CENTER"])
         elif len(focal_word) > 8:
             composition = random.choice(["STACKED", "CENTER", "INVERSE"])

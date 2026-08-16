@@ -155,7 +155,7 @@ void drawProgressiveText(String text, int x, int y, int fontChoice, float progre
   
   const GFXfont* f = getFontByChoice(fontChoice);
   display.setFont(f);
-  if (f == NULL) display.setTextSize(1);
+  if (f == NULL || fontChoice == -1) display.setTextSize(1);
   display.setCursor(x, y);
   display.print(sub);
 }
@@ -226,14 +226,10 @@ void drawLivingCanvas() {
 // Classic Vintage Telephone Receiver & Cord
 void drawProgressiveTelephone(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
-  // Handset bridge
   display.drawLine(cx - 5, cy - 2, cx + 5, cy - 2, SSD1306_WHITE);
   display.drawLine(cx - 4, cy - 1, cx + 4, cy - 1, SSD1306_WHITE);
-  // Left earpiece bell
   display.drawCircle(cx - 5, cy + 1, 2, SSD1306_WHITE);
-  // Right mouthpiece bell
   display.drawCircle(cx + 5, cy + 1, 2, SSD1306_WHITE);
-  // Curled cord
   if (progress > 0.4f) {
     display.drawPixel(cx, cy + 2, SSD1306_WHITE);
     display.drawPixel(cx + 1, cy + 3, SSD1306_WHITE);
@@ -1152,7 +1148,7 @@ void drawParticles() {
 }
 
 // ==========================================
-// PROCEDURAL SKETCHBOOK SCENE ENGINE (Dynamic Center Alignment & Auto-Fit)
+// PROCEDURAL SKETCHBOOK SCENE ENGINE (100% Lyrics Preserved & Auto-Fit)
 // ==========================================
 void drawSketchbookScene() {
   unsigned long now = millis();
@@ -1169,6 +1165,11 @@ void drawSketchbookScene() {
   bool hasPrefix = (sketchPrefix.length() > 0);
   bool hasFocal = (sketchFocalWord.length() > 0);
   bool hasSuffix = (sketchSuffix.length() > 0);
+
+  // Safeguard: Never drop prefix/suffix in Monolith
+  if (sketchComposition == "MONOLITH" && (hasPrefix || hasSuffix)) {
+    sketchComposition = "CENTER";
+  }
 
   // Dynamic Vertical Alignment Baseline Calculation (No more clipping on Y=0!)
   int prefixY = 13;
@@ -1219,7 +1220,7 @@ void drawSketchbookScene() {
     availWidth = 119;
   }
 
-  // 16-Font Preset Pairings (Rich indie variety!)
+  // 16-Font Preset Pairings
   int prefixFont = 3; 
   int focalFont = 0;  
   int suffixFont = 3; 
@@ -1275,6 +1276,12 @@ void drawSketchbookScene() {
   // 2. DIAGONAL CASCADE COMPOSITION (3-Tier Cascade)
   if (sketchComposition == "DIAGONAL") {
     if (hasPrefix) {
+      const GFXfont* pFont = getFontByChoice(prefixFont);
+      display.setFont(pFont);
+      int16_t x1, y1; uint16_t pw, ph;
+      display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
+      if (pw > 70) { prefixFont = 4; pFont = getFontByChoice(4); display.setFont(pFont); display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph); }
+      if (pw > 70) { prefixFont = -1; pw = sketchPrefix.length() * 6; }
       drawProgressiveText(sketchPrefix, minX + 2, prefixY, prefixFont, rawProgress);
     }
     if (hasFocal) {
@@ -1286,6 +1293,7 @@ void drawSketchbookScene() {
         focalFont = 7; // Sans Bold 9pt
         display.setFont(&FreeSansBold9pt7b);
         display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+        if (fw > 76) { focalFont = -1; fw = sketchFocalWord.length() * 6; }
       }
       int fx = minX + (hasPrefix ? 28 : 10) + focalXOffset;
       if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
@@ -1300,6 +1308,8 @@ void drawSketchbookScene() {
       display.setFont(sFont);
       int16_t x1, y1; uint16_t sw, sh;
       display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
+      if (sw > 70) { suffixFont = 4; sFont = getFontByChoice(4); display.setFont(sFont); display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh); }
+      if (sw > 70) { suffixFont = -1; sw = sketchSuffix.length() * 6; }
       int sx = max(minX, 126 - (int)sw);
       drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
     }
@@ -1308,7 +1318,15 @@ void drawSketchbookScene() {
 
   // 3. SPLIT COMPOSITION
   if (sketchComposition == "SPLIT") {
-    if (hasPrefix) drawProgressiveText(sketchPrefix, minX + 2, prefixY, prefixFont, rawProgress);
+    if (hasPrefix) {
+      const GFXfont* pFont = getFontByChoice(prefixFont);
+      display.setFont(pFont);
+      int16_t x1, y1; uint16_t pw, ph;
+      display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
+      if (pw > availWidth) { prefixFont = 4; pFont = getFontByChoice(4); display.setFont(pFont); display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph); }
+      if (pw > availWidth) { prefixFont = -1; pw = sketchPrefix.length() * 6; }
+      drawProgressiveText(sketchPrefix, minX + 2, prefixY, prefixFont, rawProgress);
+    }
     if (hasFocal) {
       const GFXfont* fFont = getFontByChoice(focalFont);
       display.setFont(fFont);
@@ -1318,6 +1336,7 @@ void drawSketchbookScene() {
         focalFont = 3;
         display.setFont(&FreeSerifItalic9pt7b);
         display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+        if (fw > availWidth) { focalFont = -1; fw = sketchFocalWord.length() * 6; }
       }
       int fx = minX + (availWidth - (int)fw) / 2 + focalXOffset;
       drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
@@ -1330,13 +1349,15 @@ void drawSketchbookScene() {
       display.setFont(sFont);
       int16_t x1, y1; uint16_t sw, sh;
       display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
+      if (sw > availWidth) { suffixFont = 4; sFont = getFontByChoice(4); display.setFont(sFont); display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh); }
+      if (sw > availWidth) { suffixFont = -1; sw = sketchSuffix.length() * 6; }
       int sx = max(minX, 126 - (int)sw);
       drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
     }
     return;
   }
 
-  // 4. STANDARD SKETCHBOOK / CENTER / STACKED / INVERSE
+  // 4. STANDARD SKETCHBOOK / CENTER / STACKED / INVERSE / COMIC / DREAMY
   if (hasPrefix) {
     const GFXfont* pFont = getFontByChoice(prefixFont);
     display.setFont(pFont);
@@ -1350,7 +1371,7 @@ void drawSketchbookScene() {
       display.setFont(pFont);
       display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
       if (pw > availWidth) {
-        prefixFont = -1; // 6x8 system font
+        prefixFont = -1; // 6x8 system font (fits 21 chars!)
         display.setFont(NULL);
         pw = sketchPrefix.length() * 6;
       }
