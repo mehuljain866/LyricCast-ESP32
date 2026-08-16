@@ -192,6 +192,7 @@ async def main():
     last_sent_word_index = -1
     last_sent_font = ""
     last_sent_info_layout = ""
+    last_sent_particles = ""
 
     while True:
         try:
@@ -247,8 +248,14 @@ async def main():
                         ser.write(f"I|MARQUEE\n".encode('utf-8', 'replace'))
                     last_sent_info_layout = current_info_layout
 
+                # Send particle style updates if changed (Sparkles, Dust, Stars, Bubbles, Rain, Off)
+                current_particles = CURRENT_SETTINGS.get('particleStyle', 'sparkles')
+                if current_particles != last_sent_particles:
+                    ser.write(f"P|{current_particles.upper()}\n".encode('utf-8', 'replace'))
+                    last_sent_particles = current_particles
+
                 # Send font updates if changed
-                current_font = CURRENT_SETTINGS.get('font', 'handwritten')
+                current_font = CURRENT_SETTINGS.get('font', 'mix')
                 if current_font != last_sent_font:
                     ser.write(f"F|{current_font.upper()}\n".encode('utf-8', 'replace'))
                     last_sent_font = current_font

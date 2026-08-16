@@ -484,6 +484,18 @@
         </div>
 
         <div class="form-group">
+            <label>Ambient Particle Style (Blue Canvas)</label>
+            <select id="particle-select">
+                <option value="sparkles" selected>✨ Twinkling Sparkles (Micro Crosses)</option>
+                <option value="dust">🫧 Floating Stardust (Gentle Ambient Dots)</option>
+                <option value="stars">⭐ Drifting 4-Point Stars</option>
+                <option value="bubbles">⚪ Rising Micro Bubbles</option>
+                <option value="rain">🌧️ Ambient Micro Rain / Mist</option>
+                <option value="off">🚫 Off (Pure Clean Black Background)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
             <label>Song Info Display (Yellow Band)</label>
             <select id="song-info-layout-select">
                 <option value="twoline" selected>📄 2-Line Static (Title & Artist + Bottom-Edge Progress Bar)</option>
@@ -588,6 +600,7 @@
             logo: document.querySelector('input[name="logo"]:checked').value,
             uiScale: document.getElementById('ui-scale').value,
             font: document.getElementById('font-select').value,
+            particleStyle: document.getElementById('particle-select').value,
             songInfoLayout: document.getElementById('song-info-layout-select').value
         };
 

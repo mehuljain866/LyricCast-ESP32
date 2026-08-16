@@ -125,7 +125,6 @@ int* getActiveHeights() {
   return scriptHeights;
 }
 
-// 16-Font Complete Selection Library
 const GFXfont* getFontByChoice(int choice) {
   switch (choice) {
     case 0: return &FreeSerifBoldItalic12pt7b; // Cursive Bold 12
@@ -148,7 +147,6 @@ const GFXfont* getFontByChoice(int choice) {
   }
 }
 
-// Full-ASCII Text Rendering with Progressive Reveal (Strict 128x48 bounds)
 void drawProgressiveText(String text, int x, int y, int fontChoice, float progress) {
   if (text.length() == 0 || progress <= 0.0f) return;
   int visibleChars = max(1, (int)(text.length() * min(1.0f, progress * 2.2f)));
@@ -162,8 +160,91 @@ void drawProgressiveText(String text, int x, int y, int fontChoice, float progre
 }
 
 // ==========================================
-// 30+ PROCEDURAL VECTOR DOODLES (Strict 128x48 Fitting)
+// CUSTOMIZABLE AMBIENT PARTICLES (6 Styles)
 // ==========================================
+enum ParticleStyle {
+  PARTICLE_SPARKLES = 0,
+  PARTICLE_DUST = 1,
+  PARTICLE_STARS = 2,
+  PARTICLE_BUBBLES = 3,
+  PARTICLE_RAIN = 4,
+  PARTICLE_OFF = 5
+};
+ParticleStyle currentParticleStyle = PARTICLE_SPARKLES;
+
+void drawLivingCanvas() {
+  if (currentParticleStyle == PARTICLE_OFF) return;
+  
+  unsigned long t = millis();
+  if (currentParticleStyle == PARTICLE_SPARKLES) {
+    for (int i = 0; i < 3; i++) {
+      int px = (int)((t / (30 + i * 15) + i * 43) % 126);
+      int py = (int)(10 + sin(t * 0.003f + i * 2.0f) * 6.0f + i * 11);
+      if (py >= 2 && py <= 45) {
+        display.drawPixel(px, py, SSD1306_WHITE);
+        display.drawPixel(px - 1, py, SSD1306_WHITE);
+        display.drawPixel(px + 1, py, SSD1306_WHITE);
+        display.drawPixel(px, py - 1, SSD1306_WHITE);
+        display.drawPixel(px, py + 1, SSD1306_WHITE);
+      }
+    }
+  } else if (currentParticleStyle == PARTICLE_DUST) {
+    for (int i = 0; i < 4; i++) {
+      int px = (int)((t / (25 + i * 20) + i * 35) % 126);
+      int py = (int)(6 + sin(t * 0.002f + i * 1.5f) * 8.0f + i * 10);
+      if (py >= 2 && py <= 45) display.drawPixel(px, py, SSD1306_WHITE);
+    }
+  } else if (currentParticleStyle == PARTICLE_STARS) {
+    for (int i = 0; i < 2; i++) {
+      int px = (int)((t / (40 + i * 25) + i * 60) % 124) + 2;
+      int py = (int)(12 + sin(t * 0.004f + i * 3.0f) * 6.0f + i * 16);
+      if (py >= 4 && py <= 43) {
+        display.drawLine(px - 2, py, px + 2, py, SSD1306_WHITE);
+        display.drawLine(px, py - 2, px, py + 2, SSD1306_WHITE);
+      }
+    }
+  } else if (currentParticleStyle == PARTICLE_BUBBLES) {
+    for (int i = 0; i < 3; i++) {
+      int px = (int)((i * 45 + 15) % 120);
+      int py = 45 - (int)((t / (18 + i * 5) + i * 14) % 45);
+      if (py >= 2 && py <= 45) display.drawCircle(px, py, 1 + (i % 2), SSD1306_WHITE);
+    }
+  } else if (currentParticleStyle == PARTICLE_RAIN) {
+    for (int i = 0; i < 4; i++) {
+      int px = (int)((i * 33 + (t / 15)) % 126);
+      int py = (int)((t / 10 + i * 12) % 45);
+      display.drawLine(px, py, px - 1, py + 2, SSD1306_WHITE);
+    }
+  }
+}
+
+// ==========================================
+// 50+ PROCEDURAL VECTOR DOODLE ARSENAL
+// ==========================================
+
+void drawProgressiveHouse(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 5, cy, 10, 7, SSD1306_WHITE);
+  display.drawLine(cx - 7, cy, cx, cy - 6, SSD1306_WHITE);
+  display.drawLine(cx + 7, cy, cx, cy - 6, SSD1306_WHITE);
+  display.drawLine(cx - 1, cy + 3, cx - 1, cy + 7, SSD1306_WHITE);
+  display.drawLine(cx + 1, cy + 3, cx + 1, cy + 7, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy - 3, cx + 3, cy - 5, SSD1306_WHITE);
+}
+
+void drawProgressiveGun(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 6, cy - 3, 12, 3, SSD1306_WHITE);
+  display.drawRect(cx - 6, cy, 4, 6, SSD1306_WHITE);
+  display.drawPixel(cx - 1, cy + 1, SSD1306_WHITE);
+}
+
+void drawProgressiveEarring(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy - 2, 3, SSD1306_WHITE);
+  display.drawLine(cx, cy + 1, cx, cy + 5, SSD1306_WHITE);
+  display.drawPixel(cx, cy + 6, SSD1306_WHITE);
+}
 
 void drawProgressiveRose(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
@@ -177,18 +258,9 @@ void drawProgressiveRose(int cx, int cy, float progress) {
     if (i > 0) display.drawLine(lastX, lastY, px, py, SSD1306_WHITE);
     lastX = px; lastY = py;
   }
-  if (progress > 0.35f) {
-    float p1 = min(1.0f, (progress - 0.35f) * 2.0f);
-    int r = 5;
-    for (float a = 0.5f; a < 2.8f * p1; a += 0.35f) {
-      display.drawPixel(cx - (int)(cos(a) * r), cy - (int)(sin(a) * r * 0.8f), SSD1306_WHITE);
-      display.drawPixel(cx + (int)(cos(a) * r), cy - (int)(sin(a) * r * 0.8f), SSD1306_WHITE);
-    }
-  }
-  if (progress > 0.6f) {
-    float p2 = min(1.0f, (progress - 0.6f) * 2.5f);
-    int stemLen = (int)(p2 * 7.0f);
-    display.drawLine(cx, cy + 3, cx - 1, cy + 3 + stemLen, SSD1306_WHITE);
+  if (progress > 0.4f) {
+    display.drawLine(cx, cy + 3, cx - 1, cy + 9, SSD1306_WHITE);
+    display.drawLine(cx, cy + 5, cx + 3, cy + 4, SSD1306_WHITE);
   }
 }
 
@@ -414,6 +486,156 @@ void drawProgressiveTarget(int cx, int cy, float progress) {
   display.drawCircle(cx, cy, 2, SSD1306_WHITE);
 }
 
+void drawProgressiveAnchor(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy - 3, 1, SSD1306_WHITE);
+  display.drawLine(cx, cy - 2, cx, cy + 4, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy + 1, cx + 4, cy + 1, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy + 1, cx - 4, cy + 3, SSD1306_WHITE);
+  display.drawLine(cx + 4, cy + 1, cx + 4, cy + 3, SSD1306_WHITE);
+}
+
+void drawProgressiveDice(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 4, cy - 4, 8, 8, SSD1306_WHITE);
+  display.drawPixel(cx - 2, cy - 2, SSD1306_WHITE);
+  display.drawPixel(cx + 2, cy + 2, SSD1306_WHITE);
+  display.drawPixel(cx, cy, SSD1306_WHITE);
+}
+
+void drawProgressivePlanet(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy, 3, SSD1306_WHITE);
+  display.drawLine(cx - 6, cy + 2, cx + 6, cy - 2, SSD1306_WHITE);
+}
+
+void drawProgressiveLeaf(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 4, cy + 3, cx + 4, cy - 3, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy + 3, cx, cy - 4, SSD1306_WHITE);
+  display.drawLine(cx, cy - 4, cx + 4, cy - 3, SSD1306_WHITE);
+}
+
+void drawProgressiveCandle(int cx, int cy, float progress, unsigned long time) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 2, cy - 1, 4, 7, SSD1306_WHITE);
+  display.drawLine(cx, cy - 1, cx, cy - 3, SSD1306_WHITE);
+  display.drawPixel(cx + ((time/100)%2==0?0:1), cy - 4, SSD1306_WHITE);
+}
+
+void drawProgressivePhone(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 3, cy - 5, 6, 10, SSD1306_WHITE);
+  display.drawPixel(cx, cy + 3, SSD1306_WHITE);
+}
+
+void drawProgressivePill(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 5, cy - 2, 10, 4, SSD1306_WHITE);
+  display.drawLine(cx, cy - 2, cx, cy + 2, SSD1306_WHITE);
+}
+
+void drawProgressiveGlasses(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 6, cy - 2, 4, 4, SSD1306_WHITE);
+  display.drawRect(cx + 2, cy - 2, 4, 4, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy - 1, cx + 2, cy - 1, SSD1306_WHITE);
+}
+
+void drawProgressiveSkull(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy - 2, 3, SSD1306_WHITE);
+  display.drawRect(cx - 2, cy + 1, 4, 3, SSD1306_WHITE);
+  display.drawPixel(cx - 1, cy - 2, SSD1306_BLACK);
+  display.drawPixel(cx + 1, cy - 2, SSD1306_BLACK);
+}
+
+void drawProgressiveBalloon(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy - 3, 3, SSD1306_WHITE);
+  display.drawLine(cx, cy, cx - 1, cy + 4, SSD1306_WHITE);
+}
+
+void drawProgressiveBell(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 4, cy + 2, cx + 4, cy + 2, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy + 2, cx - 2, cy - 3, SSD1306_WHITE);
+  display.drawLine(cx + 4, cy + 2, cx + 2, cy - 3, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy - 3, cx + 2, cy - 3, SSD1306_WHITE);
+  display.drawPixel(cx, cy + 3, SSD1306_WHITE);
+}
+
+void drawProgressiveGift(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 4, cy - 2, 8, 7, SSD1306_WHITE);
+  display.drawLine(cx, cy - 2, cx, cy + 5, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy + 1, cx + 4, cy + 1, SSD1306_WHITE);
+  display.drawPixel(cx - 1, cy - 3, SSD1306_WHITE);
+  display.drawPixel(cx + 1, cy - 3, SSD1306_WHITE);
+}
+
+void drawProgressiveShoe(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 5, cy + 2, cx + 5, cy + 2, SSD1306_WHITE);
+  display.drawLine(cx - 5, cy + 2, cx - 5, cy - 2, SSD1306_WHITE);
+  display.drawLine(cx - 5, cy - 2, cx - 2, cy - 2, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy - 2, cx + 2, cy, SSD1306_WHITE);
+  display.drawLine(cx + 2, cy, cx + 5, cy + 2, SSD1306_WHITE);
+}
+
+void drawProgressiveWine(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 3, cy - 4, cx + 3, cy - 4, SSD1306_WHITE);
+  display.drawLine(cx - 3, cy - 4, cx, cy, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy - 4, cx, cy, SSD1306_WHITE);
+  display.drawLine(cx, cy, cx, cy + 4, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy + 4, cx + 2, cy + 4, SSD1306_WHITE);
+}
+
+void drawProgressiveHeadphones(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy - 2, 4, SSD1306_WHITE);
+  display.fillRect(cx - 5, cy - 2, 2, 4, SSD1306_WHITE);
+  display.fillRect(cx + 4, cy - 2, 2, 4, SSD1306_WHITE);
+  display.fillRect(cx - 4, cy + 1, 8, 3, SSD1306_BLACK);
+}
+
+void drawProgressiveBattery(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 5, cy - 3, 10, 6, SSD1306_WHITE);
+  display.drawRect(cx + 5, cy - 1, 1, 2, SSD1306_WHITE);
+  display.fillRect(cx - 3, cy - 1, 4, 2, SSD1306_WHITE);
+}
+
+void drawProgressiveBow(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 4, cy - 4, cx - 4, cy + 4, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy - 4, cx + 2, cy, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy + 4, cx + 2, cy, SSD1306_WHITE);
+  display.drawLine(cx - 5, cy, cx + 4, cy, SSD1306_WHITE);
+}
+
+void drawProgressiveCloud(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx - 2, cy - 1, 3, SSD1306_WHITE);
+  display.drawCircle(cx + 3, cy, 2, SSD1306_WHITE);
+  display.drawLine(cx - 5, cy + 2, cx + 5, cy + 2, SSD1306_WHITE);
+}
+
+void drawProgressiveCherry(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx - 2, cy + 2, 2, SSD1306_WHITE);
+  display.drawCircle(cx + 3, cy + 2, 2, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy, cx, cy - 4, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy, cx, cy - 4, SSD1306_WHITE);
+}
+
+void drawProgressivePadlock(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 3, cy, 7, 5, SSD1306_WHITE);
+  display.drawCircle(cx, cy - 1, 2, SSD1306_WHITE);
+}
+
 void drawProgressiveBubble(int cx, int cy, int rx, int ry, float progress) {
   if (progress <= 0.0f) return;
   int steps = (int)(min(1.0f, progress * 1.3f) * 16.0f);
@@ -511,19 +733,11 @@ void drawCornerFrames(float progress) {
   display.drawLine(125, 45, 125, 45 - len, SSD1306_WHITE);
 }
 
-void drawLivingCanvas() {
-  unsigned long t = millis();
-  for (int i = 0; i < 3; i++) {
-    int px = (int)((t / (30 + i * 15) + i * 43) % 126);
-    int py = (int)(8 + sin(t * 0.003f + i * 2.0f) * 5.0f + i * 11);
-    if (py >= 0 && py <= 46) {
-      display.drawPixel(px, py, SSD1306_WHITE);
-    }
-  }
-}
-
 void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now) {
-  if (doodle == "ROSE") drawProgressiveRose(cx, cy, progress);
+  if (doodle == "HOME") drawProgressiveHouse(cx, cy, progress);
+  else if (doodle == "GUN") drawProgressiveGun(cx, cy, progress);
+  else if (doodle == "EARRING") drawProgressiveEarring(cx, cy, progress);
+  else if (doodle == "ROSE") drawProgressiveRose(cx, cy, progress);
   else if (doodle == "HEART") drawProgressiveHeart(cx, cy, progress, now);
   else if (doodle == "NOTE") drawProgressiveNotes(cx, cy, progress, now);
   else if (doodle == "STAR") { drawProgressiveStar(cx - 5, cy - 3, progress); drawProgressiveStar(cx + 5, cy + 3, progress); }
@@ -533,6 +747,7 @@ void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now
   else if (doodle == "WINGS") drawProgressiveWings(cx, cy, progress, now);
   else if (doodle == "BUTTERFLY") drawProgressiveButterfly(cx, cy, progress, now);
   else if (doodle == "SUN") drawProgressiveSun(cx, cy, progress);
+  else if (doodle == "MOON") drawProgressiveMoon(cx, cy, progress);
   else if (doodle == "LIGHTNING") drawProgressiveLightning(cx, cy, progress);
   else if (doodle == "EYE") drawProgressiveEye(cx, cy, progress);
   else if (doodle == "CROWN") drawProgressiveCrown(cx, cy, progress);
@@ -541,11 +756,30 @@ void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now
   else if (doodle == "CAR") drawProgressiveCar(cx, cy, progress, now);
   else if (doodle == "COFFEE") drawProgressiveCoffee(cx, cy, progress, now);
   else if (doodle == "GHOST") drawProgressiveGhost(cx, cy, progress, now);
-  else if (doodle == "MOON") drawProgressiveMoon(cx, cy, progress);
   else if (doodle == "KEY") drawProgressiveKey(cx, cy, progress);
   else if (doodle == "SWORD") drawProgressiveSword(cx, cy, progress);
   else if (doodle == "BULB") drawProgressiveBulb(cx, cy, progress);
   else if (doodle == "TARGET") drawProgressiveTarget(cx, cy, progress);
+  else if (doodle == "ANCHOR") drawProgressiveAnchor(cx, cy, progress);
+  else if (doodle == "DICE") drawProgressiveDice(cx, cy, progress);
+  else if (doodle == "PLANET") drawProgressivePlanet(cx, cy, progress);
+  else if (doodle == "LEAF") drawProgressiveLeaf(cx, cy, progress);
+  else if (doodle == "CANDLE") drawProgressiveCandle(cx, cy, progress, now);
+  else if (doodle == "PHONE") drawProgressivePhone(cx, cy, progress);
+  else if (doodle == "PILL") drawProgressivePill(cx, cy, progress);
+  else if (doodle == "GLASSES") drawProgressiveGlasses(cx, cy, progress);
+  else if (doodle == "SKULL") drawProgressiveSkull(cx, cy, progress);
+  else if (doodle == "BALLOON") drawProgressiveBalloon(cx, cy, progress);
+  else if (doodle == "BELL") drawProgressiveBell(cx, cy, progress);
+  else if (doodle == "GIFT") drawProgressiveGift(cx, cy, progress);
+  else if (doodle == "SHOE") drawProgressiveShoe(cx, cy, progress);
+  else if (doodle == "WINE") drawProgressiveWine(cx, cy, progress);
+  else if (doodle == "HEADPHONES") drawProgressiveHeadphones(cx, cy, progress);
+  else if (doodle == "BATTERY") drawProgressiveBattery(cx, cy, progress);
+  else if (doodle == "BOW") drawProgressiveBow(cx, cy, progress);
+  else if (doodle == "CLOUD") drawProgressiveCloud(cx, cy, progress);
+  else if (doodle == "CHERRY") drawProgressiveCherry(cx, cy, progress);
+  else if (doodle == "PADLOCK") drawProgressivePadlock(cx, cy, progress);
   else if (doodle == "ARROW") drawProgressiveArrow(4, cy - 4, cx - 2, cy - 2, progress);
 }
 
@@ -879,7 +1113,7 @@ void drawParticles() {
 }
 
 // ==========================================
-// PROCEDURAL SKETCHBOOK SCENE ENGINE (Strict 128x48 Geometry)
+// PROCEDURAL SKETCHBOOK SCENE ENGINE (Dynamic Center Alignment)
 // ==========================================
 void drawSketchbookScene() {
   unsigned long now = millis();
@@ -893,19 +1127,40 @@ void drawSketchbookScene() {
   int minX = 2;
   int availWidth = 124;
   
-  int focalY = 27;
-  int focalXOffset = 0;
+  bool hasPrefix = (sketchPrefix.length() > 0);
+  bool hasFocal = (sketchFocalWord.length() > 0);
+  bool hasSuffix = (sketchSuffix.length() > 0);
+
+  // Dynamic Vertical Alignment Baseline Calculation (No more clipping on Y=0!)
+  int prefixY = 13;
+  int focalY = 28;
+  int suffixY = 43;
+
+  if (hasPrefix && hasFocal && hasSuffix) {
+    prefixY = 12;
+    focalY = 28;
+    suffixY = 43;
+  } else if (hasPrefix && hasFocal && !hasSuffix) {
+    prefixY = 15;
+    focalY = 35;
+  } else if (!hasPrefix && hasFocal && hasSuffix) {
+    focalY = 20;
+    suffixY = 38;
+  } else if (!hasPrefix && hasFocal && !hasSuffix) {
+    focalY = 28; // Perfectly centered vertically!
+  }
   
+  int focalXOffset = 0;
   float breathe = sin(now * 0.006f) * 1.0f;
   
   if (sketchMetaphor == "FALLING") {
-    focalY = (int)(6 + easeOutBounce(enterT) * 20.0f);
+    focalY += (int)(-10 + easeOutBounce(enterT) * 10.0f);
   } else if (sketchMetaphor == "FLYING") {
-    focalY = (int)(38 - easeOutQuad(enterT) * 14.0f);
+    focalY += (int)(10 - easeOutQuad(enterT) * 10.0f);
   } else if (sketchMetaphor == "RUNNING") {
-    focalXOffset = (int)(-25 + enterEased * 25.0f);
+    focalXOffset = (int)(-20 + enterEased * 20.0f);
   } else if (sketchMetaphor == "SPINNING") {
-    focalXOffset = (int)(sin(rawProgress * 12.0f) * 5.0f);
+    focalXOffset = (int)(sin(rawProgress * 12.0f) * 4.0f);
   } else if (sketchMetaphor == "SHAKE") {
     focalXOffset = (int)(sin(now * 0.05f) * 2.0f);
   } else {
@@ -975,10 +1230,10 @@ void drawSketchbookScene() {
 
   // 2. DIAGONAL CASCADE COMPOSITION (3-Tier Cascade)
   if (sketchComposition == "DIAGONAL") {
-    if (sketchPrefix.length() > 0) {
-      drawProgressiveText(sketchPrefix, minX + 2, 9, prefixFont, rawProgress);
+    if (hasPrefix) {
+      drawProgressiveText(sketchPrefix, minX + 2, prefixY, prefixFont, rawProgress);
     }
-    if (sketchFocalWord.length() > 0) {
+    if (hasFocal) {
       const GFXfont* fFont = getFontByChoice(focalFont);
       display.setFont(fFont);
       int16_t x1, y1; uint16_t fw, fh;
@@ -988,29 +1243,29 @@ void drawSketchbookScene() {
         display.setFont(&FreeSansBold9pt7b);
         display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
       }
-      int fx = minX + 28 + focalXOffset;
+      int fx = minX + (hasPrefix ? 28 : 10) + focalXOffset;
       if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
-      drawProgressiveText(sketchFocalWord, fx, 27, focalFont, rawProgress);
-      if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, 30, rawProgress);
+      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
+      if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, focalY + 3, rawProgress);
       if (sketchDoodle != "NONE" && fx + fw + 12 <= 126) {
-        drawDoodle(sketchDoodle, fx + fw + 7, 24, rawProgress, now);
+        drawDoodle(sketchDoodle, fx + fw + 7, focalY - 3, rawProgress, now);
       }
     }
-    if (sketchSuffix.length() > 0) {
+    if (hasSuffix) {
       const GFXfont* sFont = getFontByChoice(suffixFont);
       display.setFont(sFont);
       int16_t x1, y1; uint16_t sw, sh;
       display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
       int sx = max(minX, 126 - (int)sw);
-      drawProgressiveText(sketchSuffix, sx, 44, suffixFont, rawProgress);
+      drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
     }
     return;
   }
 
   // 3. SPLIT COMPOSITION
   if (sketchComposition == "SPLIT") {
-    if (sketchPrefix.length() > 0) drawProgressiveText(sketchPrefix, minX + 2, 9, prefixFont, rawProgress);
-    if (sketchFocalWord.length() > 0) {
+    if (hasPrefix) drawProgressiveText(sketchPrefix, minX + 2, prefixY, prefixFont, rawProgress);
+    if (hasFocal) {
       const GFXfont* fFont = getFontByChoice(focalFont);
       display.setFont(fFont);
       int16_t x1, y1; uint16_t fw, fh;
@@ -1026,34 +1281,33 @@ void drawSketchbookScene() {
         drawDoodle(sketchDoodle, fx + fw + 7, focalY - 6, rawProgress, now);
       }
     }
-    if (sketchSuffix.length() > 0) {
+    if (hasSuffix) {
       const GFXfont* sFont = getFontByChoice(suffixFont);
       display.setFont(sFont);
       int16_t x1, y1; uint16_t sw, sh;
       display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
       int sx = max(minX, 126 - (int)sw);
-      drawProgressiveText(sketchSuffix, sx, 44, suffixFont, rawProgress);
+      drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
     }
     return;
   }
 
   // 4. STANDARD SKETCHBOOK / CENTER / STACKED / INVERSE
-  if (sketchPrefix.length() > 0) {
+  if (hasPrefix) {
     const GFXfont* pFont = getFontByChoice(prefixFont);
     display.setFont(pFont);
     int16_t x1, y1; uint16_t pw, ph;
     display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
     int px = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
-    drawProgressiveText(sketchPrefix, max(minX, px), 9, prefixFont, rawProgress);
+    drawProgressiveText(sketchPrefix, max(minX, px), prefixY, prefixFont, rawProgress);
   }
   
-  if (sketchFocalWord.length() > 0) {
+  if (hasFocal) {
     const GFXfont* fFont = getFontByChoice(focalFont);
     display.setFont(fFont);
     int16_t x1, y1; uint16_t fw, fh;
     display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
     
-    // Auto step down if word is wide
     if (fw > availWidth) {
       focalFont = (focalFont == 1 || focalFont == 10) ? 7 : 3;
       fFont = getFontByChoice(focalFont);
@@ -1101,7 +1355,7 @@ void drawSketchbookScene() {
       drawProgressiveWave(minX, minX + availWidth, 45, rawProgress, now);
     }
 
-    // Procedural Semantic Doodles (Checked against 128x48 bounds)
+    // 50+ Procedural Semantic Doodles
     if (sketchDoodle != "NONE" && sketchDoodle != "CIRCLE" && sketchDoodle != "BOX" && sketchDoodle != "BUBBLE" && sketchDoodle != "WAVE" && sketchDoodle != "UNDERLINE") {
       int dx = fx + fw + 7;
       int dy = focalY - 6;
@@ -1112,13 +1366,13 @@ void drawSketchbookScene() {
     }
   }
   
-  if (sketchSuffix.length() > 0) {
+  if (hasSuffix) {
     const GFXfont* sFont = getFontByChoice(suffixFont);
     display.setFont(sFont);
     int16_t x1, y1; uint16_t sw, sh;
     display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
     int sx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
-    drawProgressiveText(sketchSuffix, max(minX, sx), 44, suffixFont, rawProgress);
+    drawProgressiveText(sketchSuffix, max(minX, sx), suffixY, suffixFont, rawProgress);
   }
 }
 
@@ -1149,6 +1403,16 @@ void parseSerialData(String data) {
       isTwoLineSongInfo = false;
       marqueeX = 128;
     }
+  }
+  else if (data.startsWith("P|")) {
+    String pCode = data.substring(2);
+    pCode.trim();
+    if (pCode == "DUST") currentParticleStyle = PARTICLE_DUST;
+    else if (pCode == "STARS") currentParticleStyle = PARTICLE_STARS;
+    else if (pCode == "BUBBLES") currentParticleStyle = PARTICLE_BUBBLES;
+    else if (pCode == "RAIN") currentParticleStyle = PARTICLE_RAIN;
+    else if (pCode == "OFF") currentParticleStyle = PARTICLE_OFF;
+    else currentParticleStyle = PARTICLE_SPARKLES;
   }
   else if (data.startsWith("K|")) {
     int p1 = data.indexOf('|', 2);
