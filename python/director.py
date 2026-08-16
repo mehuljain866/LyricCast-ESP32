@@ -1,7 +1,8 @@
 """
-LyricCast Semantic Director & Storyboard Generator (V3)
+LyricCast Semantic Director & Storyboard Generator (V4 - High Variety Arsenal)
 Analyzes lyric lines, detects semantic motion metaphors, emotional keywords,
-assigns typographic hierarchy, hand-drawn doodles, composition strategies, and animation directives.
+assigns typographic hierarchy, 30+ procedural vector doodles, 8 distinct compositional archetypes,
+and graphic visual treatments (inverse badges, corner frames, accent bars, scribble strikethroughs).
 """
 
 import re
@@ -15,32 +16,47 @@ METAPHORS = {
     'running': ['run', 'running', 'ran', 'fast', 'speed', 'chase', 'chasing', 'escape', 'away', 'drive', 'driving', 'hurry', 'rush', 'race', 'rushing'],
     'broken': ['break', 'broken', 'breaking', 'tear', 'tearing', 'apart', 'shatter', 'crush', 'crack', 'pieces', 'split', 'bleed', 'hurt', 'pain', 'scars'],
     'alone': ['alone', 'lonely', 'nobody', 'empty', 'silence', 'quiet', 'hollow', 'isolated', 'lost', 'darkness', 'dark', 'ghost', 'miss'],
-    'scream': ['scream', 'screaming', 'shout', 'shouting', 'loud', 'yell', 'noise', 'roar', 'wild', 'crazy', 'mad', 'shook'],
+    'scream': ['scream', 'screaming', 'shout', 'shouting', 'loud', 'yell', 'noise', 'roar', 'wild', 'crazy', 'mad', 'shook', 'boom'],
     'stay': ['stay', 'hold', 'never', 'forever', 'always', 'stop', 'stand', 'freeze', 'wait', 'waiting', 'keep'],
     'shake': ['shake', 'shaking', 'tremble', 'vibrate', 'quake', 'nervous', 'scared', 'fear', 'beat', 'pump']
 }
 
-# High-priority semantic doodle keywords
+# 30+ Semantic Doodle Keyword Categories
 DOODLE_MAP = {
     'rose': ['rose', 'roses', 'flower', 'flowers', 'garden', 'petal', 'petals', 'bloom', 'blooming', 'blossom', 'beauty', 'bouquet', 'daisies', 'daisy'],
     'heart': ['love', 'loved', 'loving', 'heart', 'kiss', 'kissing', 'darling', 'baby', 'sweet', 'crush', 'desire', 'passion', 'yours', 'mine', 'romance'],
     'note': ['music', 'song', 'sing', 'singing', 'melody', 'rhythm', 'tune', 'sound', 'radio', 'listen', 'hear', 'loud', 'stereo', 'dance'],
     'fire': ['fire', 'burn', 'burning', 'flame', 'flames', 'hot', 'heat', 'blaze', 'fever', 'smoke', 'wild', 'ignite', 'ashes'],
-    'star': ['star', 'stars', 'night', 'moon', 'dream', 'dreams', 'shine', 'shining', 'glow', 'glowing', 'magic', 'spark', 'light', 'bright', 'sky', 'wish', 'glitter'],
+    'star': ['star', 'stars', 'night', 'dream', 'dreams', 'shine', 'shining', 'glow', 'glowing', 'magic', 'spark', 'light', 'bright', 'wish', 'glitter'],
     'rain': ['rain', 'raining', 'cry', 'crying', 'tears', 'sad', 'storm', 'wash', 'wet', 'pour', 'drip', 'teardrop', 'teardrops', 'water', 'flood'],
     'broken': ['break', 'broken', 'breaking', 'apart', 'shatter', 'crush', 'crack', 'pieces', 'split', 'bleed', 'hurt'],
-    'wings': ['fly', 'flying', 'wings', 'bird', 'birds', 'angel', 'soar', 'feather', 'free', 'freedom', 'butterfly'],
-    'sun': ['sun', 'sunny', 'sunrise', 'sunset', 'daylight', 'morning', 'summer', 'gold', 'golden', 'warm', 'warmth', 'shine'],
-    'lightning': ['lightning', 'electric', 'shock', 'strike', 'thunder', 'power', 'flash', 'energy', 'zap', 'voltage', 'spark'],
+    'wings': ['fly', 'flying', 'wings', 'bird', 'birds', 'angel', 'soar', 'feather', 'free', 'freedom'],
+    'butterfly': ['butterfly', 'butterflies', 'flutter', 'gentle', 'soft', 'float', 'colors', 'colour'],
+    'sun': ['sun', 'sunny', 'sunrise', 'sunset', 'daylight', 'morning', 'summer', 'gold', 'golden', 'warm', 'warmth'],
+    'lightning': ['lightning', 'electric', 'shock', 'strike', 'thunder', 'power', 'flash', 'energy', 'zap', 'voltage'],
     'eye': ['eye', 'eyes', 'look', 'looking', 'see', 'seeing', 'watch', 'stare', 'gaze', 'blind', 'sight', 'view'],
     'wave': ['wave', 'waves', 'ocean', 'sea', 'pulse', 'heartbeat', 'alive', 'feel', 'feeling', 'vibe', 'current', 'flow', 'flowing'],
     'bubble': ['think', 'thinking', 'thought', 'thoughts', 'mind', 'talk', 'talking', 'say', 'saying', 'speak', 'words', 'tell', 'whisper'],
-    'box': ['name', 'title', 'brand', 'label', 'tag', 'number', 'one', 'best', 'king', 'queen', 'legend', 'forever'],
+    'box': ['name', 'title', 'brand', 'label', 'tag', 'number', 'one', 'best', 'king', 'queen', 'legend'],
+    'crown': ['crown', 'king', 'queen', 'prince', 'princess', 'royal', 'royalty', 'rule', 'ruling', 'boss', 'champ', 'throne'],
+    'diamond': ['diamond', 'diamonds', 'gem', 'gems', 'rich', 'wealth', 'jewel', 'precious', 'crystal', 'shine'],
+    'clock': ['time', 'clock', 'hours', 'late', 'seconds', 'minutes', 'years', 'forever', 'tick', 'ticking', 'wait', 'waiting'],
+    'car': ['car', 'drive', 'driving', 'ride', 'riding', 'road', 'street', 'highway', 'speed', 'wheels', 'fast'],
+    'coffee': ['coffee', 'tea', 'cup', 'morning', 'wake', 'drink', 'warm', 'cafe'],
+    'ghost': ['ghost', 'ghosts', 'haunt', 'haunted', 'dead', 'spooky', 'fade', 'fading', 'disappear', 'past', 'vanish'],
+    'moon': ['moon', 'midnight', 'sleep', 'nighttime', 'dark', 'luna', 'twilight'],
+    'key': ['key', 'keys', 'lock', 'door', 'secret', 'open', 'unlock', 'close', 'gate'],
+    'sword': ['sword', 'knife', 'dagger', 'cut', 'blade', 'sharp', 'fight', 'war', 'wound', 'stab'],
+    'bulb': ['idea', 'know', 'learn', 'glow', 'bulb', 'clever', 'genius', 'truth'],
+    'target': ['target', 'aim', 'shoot', 'hit', 'bullseye', 'goal', 'score'],
     'circle': ['all', 'everything', 'world', 'forever', 'always', 'one', 'whole', 'complete', 'around'],
-    'arrow': ['you', 'me', 'her', 'him', 'them', 'there', 'here', 'point', 'straight', 'direct', 'target']
+    'arrow': ['you', 'me', 'her', 'him', 'them', 'there', 'here', 'point', 'straight', 'direct']
 }
 
-DECORATIVE_DOODLES = ["STAR", "NOTE", "CIRCLE", "UNDERLINE", "WAVE", "BUBBLE", "BOX", "HEART", "ROSE"]
+DECORATIVE_DOODLES = [
+    "STAR", "NOTE", "ROSE", "HEART", "WAVE", "CROWN", "DIAMOND", "BUTTERFLY",
+    "BUBBLE", "BOX", "MOON", "COFFEE", "CLOCK", "WINGS", "CIRCLE", "BULB"
+]
 
 STOP_WORDS = {
     'a', 'an', 'the', 'and', 'or', 'but', 'if', 'in', 'on', 'at', 'to', 'for', 'with', 'by',
@@ -55,11 +71,13 @@ class LyricDirector:
         self.song_history = []
         self.current_seed = 42
         self.last_doodle = ""
+        self.last_composition = ""
 
     def reset_song(self, song_title, artist=""):
         self.chorus_counts = {}
         self.song_history = []
         self.last_doodle = ""
+        self.last_composition = ""
         
         seed_str = f"{song_title}-{artist}"
         hash_val = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest()[:8], 16)
@@ -79,6 +97,7 @@ class LyricDirector:
                 "doodle": "NONE",
                 "composition": "CENTER",
                 "font_preset": 0,
+                "fx_flags": 0,
                 "has_underline": False,
                 "tilt_angle": 0,
                 "duration_ms": int(duration * 1000)
@@ -94,12 +113,11 @@ class LyricDirector:
             if detected_metaphor != "NORMAL":
                 break
 
-        # 2. Detect Semantic Doodle Keyword
+        # 2. Detect Semantic Doodle Keyword (30+ Categories!)
         detected_doodle = "NONE"
         for doodle_type, triggers in DOODLE_MAP.items():
             for w in words:
                 if w.lower() in triggers:
-                    # Avoid repeating same doodle consecutively
                     cand = doodle_type.upper()
                     if cand != self.last_doodle or len(words) <= 2:
                         detected_doodle = cand
@@ -107,9 +125,9 @@ class LyricDirector:
             if detected_doodle != "NONE":
                 break
 
-        # If no explicit doodle keyword, assign varied non-repetitive decoration (NOT just arrow/underline!)
+        # If no explicit doodle keyword, assign varied non-repetitive decoration
         if detected_doodle == "NONE":
-            if len(words) >= 3 and random.random() < 0.60:
+            if len(words) >= 3 and random.random() < 0.65:
                 choices = [d for d in DECORATIVE_DOODLES if d != self.last_doodle]
                 detected_doodle = random.choice(choices)
             else:
@@ -151,24 +169,42 @@ class LyricDirector:
         prefix_str = " ".join(prefix_words).strip()
         suffix_str = " ".join(suffix_words).strip()
 
-        # 4. Composition Strategy
-        composition = "CENTER"
-        if detected_metaphor == "ALONE":
-            composition = "ISOLATED"
-        elif detected_metaphor == "FALLING" or detected_metaphor == "FLYING":
-            composition = "DIAGONAL"
-        elif len(clean_text) > 30:
-            composition = "STACKED"
+        # 4. Rich Compositional Archetypes (8 Archetypes!)
+        compositions = ["CENTER", "DIAGONAL", "STACKED", "MONOLITH", "INVERSE", "COMIC", "SPLIT", "DREAMY"]
+        
+        # Smart assignment based on line characteristics
+        if len(words) <= 2 and len(clean_text) <= 14:
+            composition = random.choice(["MONOLITH", "INVERSE", "CENTER"])
+        elif detected_metaphor in ["FALLING", "FLYING", "RUNNING"]:
+            composition = random.choice(["DIAGONAL", "SPLIT", "DREAMY"])
+        elif detected_doodle in ["BUBBLE", "NOTE"]:
+            composition = "COMIC"
+        elif len(clean_text) > 28:
+            composition = random.choice(["STACKED", "DIAGONAL", "CENTER"])
+        else:
+            cand = [c for c in compositions if c != self.last_composition]
+            composition = random.choice(cand)
 
-        # 5. Dynamic Tilt Angle & Underline (Used judiciously!)
+        self.last_composition = composition
+
+        # 5. Dynamic Visual FX Flags (Bitmask: 1=InverseBadge, 2=CornerFrames, 4=LeftAccentBar, 8=ScribbleStrike)
+        fx_flags = 0
+        if composition == "INVERSE" or (random.random() < 0.20 and len(focal_word) > 2):
+            fx_flags |= 1 # Inverse Badge
+        if composition == "MONOLITH" or random.random() < 0.18:
+            fx_flags |= 2 # Corner Frames
+        if composition == "STACKED":
+            fx_flags |= 4 # Left Accent Bar
+
+        # 6. Dynamic Tilt Angle & Underline
         tilt_angle = 0
-        if composition != "ISOLATED":
+        if composition not in ["MONOLITH", "STACKED"]:
             tilt_angle = random.choice([-5, -3, 0, 3, 5])
             
-        has_underline = (detected_doodle == "UNDERLINE" or (random.random() < 0.25 and detected_doodle in ["NONE", "NOTE"])) and len(focal_word) > 2
+        has_underline = (detected_doodle == "UNDERLINE" or (random.random() < 0.20 and detected_doodle in ["NONE", "NOTE"])) and len(focal_word) > 2
 
-        # 6. Font Preset Pairing for Mix Mode (0=ItalicScript, 1=SansBold, 2=SerifBold, 3=MonoBold, 4=Picopixel/Delicate)
-        font_preset = random.randint(0, 4)
+        # 7. Font Preset Pairing for Mix Mode
+        font_preset = random.randint(0, 5)
 
         scene = {
             "type": "kinetic_scene",
@@ -180,6 +216,7 @@ class LyricDirector:
             "doodle": detected_doodle,
             "composition": composition,
             "font_preset": font_preset,
+            "fx_flags": fx_flags,
             "has_underline": has_underline,
             "tilt_angle": tilt_angle,
             "duration_ms": max(1000, int(duration * 1000))
@@ -196,5 +233,5 @@ class LyricDirector:
             f"K|{scene['metaphor']}|{scene['doodle']}|{scene['composition']}|"
             f"{scene['focal_word']}|{scene['prefix']}|{scene['suffix']}|"
             f"{scene['tilt_angle']}|{1 if scene['has_underline'] else 0}|"
-            f"{scene['duration_ms']}|{scene.get('font_preset', 0)}\n"
+            f"{scene['duration_ms']}|{scene.get('font_preset', 0)}|{scene.get('fx_flags', 0)}\n"
         )

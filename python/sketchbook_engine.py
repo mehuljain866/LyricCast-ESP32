@@ -11,7 +11,7 @@ class SketchbookEngine:
     @staticmethod
     def format_esp32_packet(scene):
         """Formats a structured scene packet for the ESP32 Serial protocol."""
-        # Protocol: K|<metaphor>|<doodle>|<composition>|<focal>|<prefix>|<suffix>|<tilt>|<underline>|<durationMs>|<fontPreset>
+        # Protocol: K|<metaphor>|<doodle>|<composition>|<focal>|<prefix>|<suffix>|<tilt>|<underline>|<durationMs>|<fontPreset>|<fxFlags>
         prefix = scene.get('prefix', '').replace('|', '/')
         focal = scene.get('focal_word', '').replace('|', '/')
         suffix = scene.get('suffix', '').replace('|', '/')
@@ -22,6 +22,7 @@ class SketchbookEngine:
         underline = 1 if scene.get('has_underline') else 0
         duration_ms = scene.get('duration_ms', 3000)
         font_preset = scene.get('font_preset', 0)
+        fx_flags = scene.get('fx_flags', 0)
         
-        packet = f"K|{metaphor}|{doodle}|{composition}|{focal}|{prefix}|{suffix}|{tilt}|{underline}|{duration_ms}|{font_preset}\n"
+        packet = f"K|{metaphor}|{doodle}|{composition}|{focal}|{prefix}|{suffix}|{tilt}|{underline}|{duration_ms}|{font_preset}|{fx_flags}\n"
         return packet

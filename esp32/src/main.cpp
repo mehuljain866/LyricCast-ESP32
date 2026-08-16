@@ -63,7 +63,7 @@ unsigned long lastFrameMs = 0;
 
 float marqueeX = 128;
 unsigned long lastMarqueeMs = 0;
-bool isTwoLineSongInfo = true; // Toggle between 2-Line static and 1-Line scrolling marquee
+bool isTwoLineSongInfo = true;
 
 // ==========================================
 // PROCEDURAL EASING FUNCTIONS
@@ -117,7 +117,7 @@ const GFXfont** getActiveFonts() {
   if (currentFontStyle == FONT_MONO) return monoFonts;
   if (currentFontStyle == FONT_ARCADE) return arcadeFonts;
   if (currentFontStyle == FONT_SANS) return sansFonts;
-  return scriptFonts; // Default for MIX
+  return scriptFonts;
 }
 
 int* getActiveHeights() {
@@ -130,10 +130,10 @@ int* getActiveHeights() {
 }
 
 // ==========================================
-// PROCEDURAL PROGRESSIVE VECTOR DOODLERS (18+ Illustrations)
+// 30+ PROCEDURAL VECTOR DOODLE ARSENAL
 // ==========================================
 
-// 1. Blooming Hand-Sketched Rose / Flower
+// 1. Blooming Rose / Flower
 void drawProgressiveRose(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   int spiralSteps = (int)(min(1.0f, progress * 1.5f) * 12.0f);
@@ -165,7 +165,7 @@ void drawProgressiveRose(int cx, int cy, float progress) {
   }
 }
 
-// 2. Sketched Heart with Rhythmic Pulse
+// 2. Sketched Pulsing Heart
 void drawProgressiveHeart(int cx, int cy, float progress, unsigned long time) {
   if (progress <= 0.0f) return;
   float pulse = 1.0f + sin(time * 0.008f) * 0.12f;
@@ -186,15 +186,13 @@ void drawProgressiveHeart(int cx, int cy, float progress, unsigned long time) {
   }
 }
 
-// 3. Floating Musical Notes (Quaver & Beamed notes)
+// 3. Floating Musical Notes
 void drawProgressiveNotes(int cx, int cy, float progress, unsigned long time) {
   if (progress <= 0.0f) return;
   int floatY = (int)(sin(time * 0.006f) * 2.0f);
-  // Note 1 (Single quaver)
   display.fillCircle(cx - 5, cy + floatY, 2, SSD1306_WHITE);
   display.drawLine(cx - 3, cy + floatY, cx - 3, cy - 7 + floatY, SSD1306_WHITE);
   display.drawLine(cx - 3, cy - 7 + floatY, cx - 1, cy - 5 + floatY, SSD1306_WHITE);
-  // Note 2 (Beamed eighth notes)
   if (progress > 0.4f) {
     int ny = cy - 4 - floatY;
     display.fillCircle(cx + 4, ny + 5, 2, SSD1306_WHITE);
@@ -263,24 +261,36 @@ void drawProgressiveBroken(int cx, int cy, float progress) {
   }
 }
 
-// 8. Angel Wings / Butterfly
+// 8. Angel Wings
 void drawProgressiveWings(int cx, int cy, float progress, unsigned long time) {
   if (progress <= 0.0f) return;
   int flap = (int)(sin(time * 0.012f) * 2.0f);
   int w = (int)(progress * 12.0f);
-  // Left wing
   display.drawLine(cx - 1, cy, cx - w/2, cy - 4 + flap, SSD1306_WHITE);
   display.drawLine(cx - w/2, cy - 4 + flap, cx - w, cy - 2, SSD1306_WHITE);
   display.drawLine(cx - w, cy - 2, cx - w/2, cy + 2, SSD1306_WHITE);
   display.drawLine(cx - w/2, cy + 2, cx - 1, cy, SSD1306_WHITE);
-  // Right wing
   display.drawLine(cx + 1, cy, cx + w/2, cy - 4 + flap, SSD1306_WHITE);
   display.drawLine(cx + w/2, cy - 4 + flap, cx + w, cy - 2, SSD1306_WHITE);
   display.drawLine(cx + w, cy - 2, cx + w/2, cy + 2, SSD1306_WHITE);
   display.drawLine(cx + w/2, cy + 2, cx + 1, cy, SSD1306_WHITE);
 }
 
-// 9. Sunburst / Radiance
+// 9. Fluttering Butterfly
+void drawProgressiveButterfly(int cx, int cy, float progress, unsigned long time) {
+  if (progress <= 0.0f) return;
+  int flap = (int)(sin(time * 0.016f) * 3.0f);
+  display.drawPixel(cx, cy, SSD1306_WHITE);
+  display.drawPixel(cx, cy + 1, SSD1306_WHITE);
+  display.drawLine(cx - 1, cy, cx - 5 + flap, cy - 4, SSD1306_WHITE);
+  display.drawLine(cx - 5 + flap, cy - 4, cx - 4, cy + 2, SSD1306_WHITE);
+  display.drawLine(cx - 4, cy + 2, cx - 1, cy + 1, SSD1306_WHITE);
+  display.drawLine(cx + 1, cy, cx + 5 - flap, cy - 4, SSD1306_WHITE);
+  display.drawLine(cx + 5 - flap, cy - 4, cx + 4, cy + 2, SSD1306_WHITE);
+  display.drawLine(cx + 4, cy + 2, cx + 1, cy + 1, SSD1306_WHITE);
+}
+
+// 10. Sunburst / Radiance
 void drawProgressiveSun(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   display.drawCircle(cx, cy, 3, SSD1306_WHITE);
@@ -289,15 +299,9 @@ void drawProgressiveSun(int cx, int cy, float progress) {
   display.drawLine(cx + 4, cy, cx + 3 + rayLen, cy, SSD1306_WHITE);
   display.drawLine(cx, cy - 3 - rayLen, cx, cy - 4, SSD1306_WHITE);
   display.drawLine(cx, cy + 4, cx, cy + 3 + rayLen, SSD1306_WHITE);
-  if (progress > 0.6f) {
-    display.drawPixel(cx - 3, cy - 3, SSD1306_WHITE);
-    display.drawPixel(cx + 3, cy - 3, SSD1306_WHITE);
-    display.drawPixel(cx - 3, cy + 3, SSD1306_WHITE);
-    display.drawPixel(cx + 3, cy + 3, SSD1306_WHITE);
-  }
 }
 
-// 10. Electric Lightning Bolt
+// 11. Lightning Bolt
 void drawProgressiveLightning(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   display.drawLine(cx, cy - 7, cx - 3, cy - 1, SSD1306_WHITE);
@@ -307,7 +311,7 @@ void drawProgressiveLightning(int cx, int cy, float progress) {
   }
 }
 
-// 11. Sketched Eye
+// 12. Sketched Eye
 void drawProgressiveEye(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   int w = (int)(progress * 8.0f);
@@ -315,12 +319,141 @@ void drawProgressiveEye(int cx, int cy, float progress) {
   display.drawLine(cx, cy - 4, cx + w, cy, SSD1306_WHITE);
   display.drawLine(cx - w, cy, cx, cy + 4, SSD1306_WHITE);
   display.drawLine(cx, cy + 4, cx + w, cy, SSD1306_WHITE);
-  if (progress > 0.5f) {
-    display.fillCircle(cx, cy, 1, SSD1306_WHITE);
+  if (progress > 0.5f) display.fillCircle(cx, cy, 1, SSD1306_WHITE);
+}
+
+// 13. Royal Crown
+void drawProgressiveCrown(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 7, cy + 3, cx + 7, cy + 3, SSD1306_WHITE);
+  display.drawLine(cx - 7, cy + 3, cx - 7, cy - 3, SSD1306_WHITE);
+  display.drawLine(cx + 7, cy + 3, cx + 7, cy - 3, SSD1306_WHITE);
+  display.drawLine(cx - 7, cy - 3, cx - 3, cy, SSD1306_WHITE);
+  display.drawLine(cx - 3, cy, cx, cy - 5, SSD1306_WHITE);
+  display.drawLine(cx, cy - 5, cx + 3, cy, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy, cx + 7, cy - 3, SSD1306_WHITE);
+}
+
+// 14. Faceted Diamond Gem
+void drawProgressiveDiamond(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 6, cy - 2, cx + 6, cy - 2, SSD1306_WHITE);
+  display.drawLine(cx - 6, cy - 2, cx - 3, cy - 6, SSD1306_WHITE);
+  display.drawLine(cx + 6, cy - 2, cx + 3, cy - 6, SSD1306_WHITE);
+  display.drawLine(cx - 3, cy - 6, cx + 3, cy - 6, SSD1306_WHITE);
+  display.drawLine(cx - 6, cy - 2, cx, cy + 6, SSD1306_WHITE);
+  display.drawLine(cx + 6, cy - 2, cx, cy + 6, SSD1306_WHITE);
+  display.drawLine(cx - 3, cy - 6, cx, cy + 6, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy - 6, cx, cy + 6, SSD1306_WHITE);
+}
+
+// 15. Vintage Clock
+void drawProgressiveClock(int cx, int cy, float progress, unsigned long time) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy, 6, SSD1306_WHITE);
+  int handAngle = (time / 300) % 12;
+  float a = handAngle * (2.0f * PI / 12.0f);
+  display.drawLine(cx, cy, cx + (int)(sin(a) * 4.0f), cy - (int)(cos(a) * 4.0f), SSD1306_WHITE);
+  display.drawLine(cx, cy, cx + 3, cy, SSD1306_WHITE);
+}
+
+// 16. Speeding Car
+void drawProgressiveCar(int cx, int cy, float progress, unsigned long time) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 8, cy - 2, 16, 5, SSD1306_WHITE);
+  display.drawLine(cx - 5, cy - 2, cx - 2, cy - 5, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy - 5, cx + 3, cy - 5, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy - 5, cx + 6, cy - 2, SSD1306_WHITE);
+  display.drawCircle(cx - 4, cy + 4, 2, SSD1306_WHITE);
+  display.drawCircle(cx + 4, cy + 4, 2, SSD1306_WHITE);
+  // Speed lines
+  int sl = (time / 80) % 4;
+  display.drawLine(cx - 12, cy - 1, cx - 9 - sl, cy - 1, SSD1306_WHITE);
+  display.drawLine(cx - 14, cy + 2, cx - 10 - sl, cy + 2, SSD1306_WHITE);
+}
+
+// 17. Steaming Coffee Mug
+void drawProgressiveCoffee(int cx, int cy, float progress, unsigned long time) {
+  if (progress <= 0.0f) return;
+  display.drawRect(cx - 5, cy - 2, 10, 8, SSD1306_WHITE);
+  display.drawLine(cx + 5, cy, cx + 8, cy + 1, SSD1306_WHITE);
+  display.drawLine(cx + 8, cy + 1, cx + 8, cy + 4, SSD1306_WHITE);
+  display.drawLine(cx + 8, cy + 4, cx + 5, cy + 5, SSD1306_WHITE);
+  // Rising steam
+  int s1 = (int)(sin((time + 0) * 0.01f) * 2.0f);
+  int s2 = (int)(sin((time + 500) * 0.01f) * 2.0f);
+  display.drawLine(cx - 2 + s1, cy - 4, cx - 2 + s1, cy - 7, SSD1306_WHITE);
+  display.drawLine(cx + 2 + s2, cy - 4, cx + 2 + s2, cy - 7, SSD1306_WHITE);
+}
+
+// 18. Floating Ghost
+void drawProgressiveGhost(int cx, int cy, float progress, unsigned long time) {
+  if (progress <= 0.0f) return;
+  int fy = (int)(sin(time * 0.008f) * 2.0f);
+  int gy = cy + fy;
+  display.drawCircle(cx, gy - 3, 5, SSD1306_WHITE);
+  display.drawLine(cx - 5, gy - 3, cx - 5, gy + 4, SSD1306_WHITE);
+  display.drawLine(cx + 5, gy - 3, cx + 5, gy + 4, SSD1306_WHITE);
+  display.drawLine(cx - 5, gy + 4, cx - 2, gy + 2, SSD1306_WHITE);
+  display.drawLine(cx - 2, gy + 2, cx + 1, gy + 4, SSD1306_WHITE);
+  display.drawLine(cx + 1, gy + 4, cx + 5, gy + 2, SSD1306_WHITE);
+  display.drawPixel(cx - 2, gy - 3, SSD1306_WHITE);
+  display.drawPixel(cx + 2, gy - 3, SSD1306_WHITE);
+}
+
+// 19. Crescent Moon
+void drawProgressiveMoon(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  int r = 6;
+  int steps = (int)(progress * 12.0f);
+  for (int i = 0; i <= steps; i++) {
+    float a = -PI/2 + (i / 12.0f) * PI;
+    display.drawPixel(cx + (int)(cos(a) * r), cy + (int)(sin(a) * r), SSD1306_WHITE);
+    display.drawPixel(cx + (int)(cos(a) * (r - 2.5f)) + 2, cy + (int)(sin(a) * (r - 2.5f)), SSD1306_WHITE);
+  }
+  if (progress > 0.6f) display.drawPixel(cx + 6, cy - 3, SSD1306_WHITE);
+}
+
+// 20. Vintage Key
+void drawProgressiveKey(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx - 5, cy, 3, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy, cx + 6, cy, SSD1306_WHITE);
+  display.drawLine(cx + 4, cy, cx + 4, cy + 3, SSD1306_WHITE);
+  display.drawLine(cx + 6, cy, cx + 6, cy + 2, SSD1306_WHITE);
+}
+
+// 21. Medieval Dagger / Sword
+void drawProgressiveSword(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawLine(cx - 6, cy + 6, cx + 6, cy - 6, SSD1306_WHITE);
+  display.drawLine(cx - 3, cy + 1, cx - 1, cy + 3, SSD1306_WHITE);
+  display.drawLine(cx - 5, cy + 7, cx - 7, cy + 5, SSD1306_WHITE);
+}
+
+// 22. Lightbulb
+void drawProgressiveBulb(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy - 2, 4, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy + 2, cx + 2, cy + 2, SSD1306_WHITE);
+  display.drawLine(cx - 1, cy + 4, cx + 1, cy + 4, SSD1306_WHITE);
+  if (progress > 0.6f) {
+    display.drawPixel(cx - 5, cy - 5, SSD1306_WHITE);
+    display.drawPixel(cx + 5, cy - 5, SSD1306_WHITE);
   }
 }
 
-// 12. Hand-Drawn Comic Thought / Speech Bubble
+// 23. Bullseye Target
+void drawProgressiveTarget(int cx, int cy, float progress) {
+  if (progress <= 0.0f) return;
+  display.drawCircle(cx, cy, 6, SSD1306_WHITE);
+  display.drawCircle(cx, cy, 3, SSD1306_WHITE);
+  display.drawPixel(cx, cy, SSD1306_WHITE);
+  display.drawLine(cx - 8, cy, cx + 8, cy, SSD1306_WHITE);
+  display.drawLine(cx, cy - 8, cx, cy + 8, SSD1306_WHITE);
+}
+
+// 24. Comic Thought Bubble
 void drawProgressiveBubble(int cx, int cy, int rx, int ry, float progress) {
   if (progress <= 0.0f) return;
   int steps = (int)(min(1.0f, progress * 1.3f) * 16.0f);
@@ -332,33 +465,29 @@ void drawProgressiveBubble(int cx, int cy, int rx, int ry, float progress) {
     if (i > 0) display.drawLine(lastX, lastY, px, py, SSD1306_WHITE);
     lastX = px; lastY = py;
   }
-  // Little thought tail
   if (progress > 0.7f) {
     display.drawCircle(cx - rx + 2, cy + ry + 3, 1, SSD1306_WHITE);
     display.drawPixel(cx - rx - 2, cy + ry + 6, SSD1306_WHITE);
   }
 }
 
-// 13. Hand-Drawn Sketchy Box / Editorial Brackets `[ WORD ]`
+// 25. Editorial Box / Brackets `[ WORD ]`
 void drawProgressiveBox(int x1, int y1, int x2, int y2, float progress) {
   if (progress <= 0.0f) return;
   int h = y2 - y1;
   int drawH = (int)(progress * (float)h);
-  // Left bracket
   display.drawLine(x1, y1, x1 + 3, y1, SSD1306_WHITE);
   display.drawLine(x1, y1, x1, y1 + drawH, SSD1306_WHITE);
   display.drawLine(x1, y1 + drawH, x1 + 3, y1 + drawH, SSD1306_WHITE);
-  // Right bracket
   display.drawLine(x2, y1, x2 - 3, y1, SSD1306_WHITE);
   display.drawLine(x2, y1, x2, y1 + drawH, SSD1306_WHITE);
   display.drawLine(x2, y1 + drawH, x2 - 3, y1 + drawH, SSD1306_WHITE);
 }
 
-// 14. Heartbeat / Soundwave ECG Pulse
+// 26. Heartbeat / Soundwave ECG Pulse
 void drawProgressiveWave(int x1, int x2, int y, float progress, unsigned long time) {
   if (progress <= 0.0f) return;
   int w = x2 - x1;
-  int curX = x1;
   int targetX = x1 + (int)(progress * (float)w);
   int lastX = x1, lastY = y;
   for (int x = x1; x <= targetX; x += 3) {
@@ -376,22 +505,7 @@ void drawProgressiveWave(int x1, int x2, int y, float progress, unsigned long ti
   }
 }
 
-// 15. Crescent Moon
-void drawProgressiveMoon(int cx, int cy, float progress) {
-  if (progress <= 0.0f) return;
-  int r = 6;
-  int steps = (int)(progress * 12.0f);
-  for (int i = 0; i <= steps; i++) {
-    float a = -PI/2 + (i / 12.0f) * PI;
-    display.drawPixel(cx + (int)(cos(a) * r), cy + (int)(sin(a) * r), SSD1306_WHITE);
-    display.drawPixel(cx + (int)(cos(a) * (r - 2.5f)) + 2, cy + (int)(sin(a) * (r - 2.5f)), SSD1306_WHITE);
-  }
-  if (progress > 0.6f) {
-    display.drawPixel(cx + 6, cy - 3, SSD1306_WHITE);
-  }
-}
-
-// 16. Sketched Arrow
+// 27. Sketched Arrow
 void drawProgressiveArrow(int x1, int y1, int x2, int y2, float progress) {
   if (progress <= 0.0f) return;
   int curX = x1 + (int)((x2 - x1) * min(1.0f, progress * 1.3f));
@@ -403,7 +517,7 @@ void drawProgressiveArrow(int x1, int y1, int x2, int y2, float progress) {
   }
 }
 
-// 17. Sketched Underline
+// 28. Sketched Underline
 void drawProgressiveUnderline(int x1, int x2, int y, float progress) {
   if (progress <= 0.0f) return;
   int targetX = x1 + (int)((x2 - x1) * min(1.0f, progress * 1.3f));
@@ -419,7 +533,7 @@ void drawProgressiveUnderline(int x1, int x2, int y, float progress) {
   }
 }
 
-// 18. Sketched Circle Loop
+// 29. Sketched Circle Loop
 void drawProgressiveCircle(int cx, int cy, int rx, int ry, float progress) {
   if (progress <= 0.0f) return;
   int steps = (int)(min(1.0f, progress * 1.2f) * 20.0f);
@@ -433,47 +547,50 @@ void drawProgressiveCircle(int cx, int cy, int rx, int ry, float progress) {
   }
 }
 
+// 30. Graphic Corner Frame Brackets `┌ ┐ └ ┘`
+void drawCornerFrames(float progress) {
+  if (progress <= 0.0f) return;
+  int len = (int)(progress * 8.0f);
+  // Top-Left
+  display.drawLine(2, 2, 2 + len, 2, SSD1306_WHITE);
+  display.drawLine(2, 2, 2, 2 + len, SSD1306_WHITE);
+  // Top-Right
+  display.drawLine(125, 2, 125 - len, 2, SSD1306_WHITE);
+  display.drawLine(125, 2, 125, 2 + len, SSD1306_WHITE);
+  // Bottom-Left
+  display.drawLine(2, 45, 2 + len, 45, SSD1306_WHITE);
+  display.drawLine(2, 45, 2, 45 - len, SSD1306_WHITE);
+  // Bottom-Right
+  display.drawLine(125, 45, 125 - len, 45, SSD1306_WHITE);
+  display.drawLine(125, 45, 125, 45 - len, SSD1306_WHITE);
+}
+
 // Full-ASCII Text Rendering with Progressive Reveal
 void drawProgressiveText(String text, int x, int y, int fontChoice, float progress) {
   if (text.length() == 0 || progress <= 0.0f) return;
-  
   int visibleChars = max(1, (int)(text.length() * min(1.0f, progress * 2.2f)));
   String sub = text.substring(0, visibleChars);
   
   if (fontChoice == 0) {
     display.setFont(&FreeSerifBoldItalic12pt7b);
-    display.setCursor(x, y);
-    display.print(sub);
   } else if (fontChoice == 1) {
     display.setFont(&FreeSansBold12pt7b);
-    display.setCursor(x, y);
-    display.print(sub);
   } else if (fontChoice == 2) {
     display.setFont(&FreeSerifBold12pt7b);
-    display.setCursor(x, y);
-    display.print(sub);
   } else if (fontChoice == 3) {
     display.setFont(&FreeSerifItalic9pt7b);
-    display.setCursor(x, y);
-    display.print(sub);
   } else if (fontChoice == 4) {
     display.setFont(&FreeSans9pt7b);
-    display.setCursor(x, y);
-    display.print(sub);
   } else if (fontChoice == 5) {
     display.setFont(&FreeMonoBold9pt7b);
-    display.setCursor(x, y);
-    display.print(sub);
   } else if (fontChoice == 6) {
     display.setFont(&Org_01);
-    display.setCursor(x, y);
-    display.print(sub);
   } else {
     display.setFont(NULL);
     display.setTextSize(1);
-    display.setCursor(x, y);
-    display.print(sub);
   }
+  display.setCursor(x, y);
+  display.print(sub);
 }
 
 // ==========================================
@@ -491,6 +608,7 @@ bool sketchUnderline = false;
 uint32_t sketchDurationMs = 3000;
 unsigned long sketchSceneStartMs = 0;
 int sketchFontPreset = 0;
+int sketchFxFlags = 0;
 
 // Dynamic Font Caching Structures
 struct LyricLayout {
@@ -822,8 +940,35 @@ void drawLivingCanvas() {
 }
 
 // ==========================================
-// PROCEDURAL SKETCHBOOK SCENE ENGINE (V3)
+// PROCEDURAL SKETCHBOOK SCENE ENGINE (V4 - High Variety)
 // ==========================================
+void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now) {
+  if (doodle == "ROSE") drawProgressiveRose(cx, cy, progress);
+  else if (doodle == "HEART") drawProgressiveHeart(cx, cy, progress, now);
+  else if (doodle == "NOTE") drawProgressiveNotes(cx, cy, progress, now);
+  else if (doodle == "STAR") { drawProgressiveStar(cx - 8, cy - 4, progress); drawProgressiveStar(cx + 8, cy + 4, progress); }
+  else if (doodle == "FIRE") drawProgressiveFlame(cx, cy, progress, now);
+  else if (doodle == "RAIN") drawProgressiveRain(0, 0, 128, 46, progress, now);
+  else if (doodle == "BROKEN") drawProgressiveBroken(cx, cy, progress);
+  else if (doodle == "WINGS") drawProgressiveWings(cx, cy, progress, now);
+  else if (doodle == "BUTTERFLY") drawProgressiveButterfly(cx, cy, progress, now);
+  else if (doodle == "SUN") drawProgressiveSun(cx, cy, progress);
+  else if (doodle == "LIGHTNING") drawProgressiveLightning(cx, cy, progress);
+  else if (doodle == "EYE") drawProgressiveEye(cx, cy, progress);
+  else if (doodle == "CROWN") drawProgressiveCrown(cx, cy, progress);
+  else if (doodle == "DIAMOND") drawProgressiveDiamond(cx, cy, progress);
+  else if (doodle == "CLOCK") drawProgressiveClock(cx, cy, progress, now);
+  else if (doodle == "CAR") drawProgressiveCar(cx, cy, progress, now);
+  else if (doodle == "COFFEE") drawProgressiveCoffee(cx, cy, progress, now);
+  else if (doodle == "GHOST") drawProgressiveGhost(cx, cy, progress, now);
+  else if (doodle == "MOON") drawProgressiveMoon(cx, cy, progress);
+  else if (doodle == "KEY") drawProgressiveKey(cx, cy, progress);
+  else if (doodle == "SWORD") drawProgressiveSword(cx, cy, progress);
+  else if (doodle == "BULB") drawProgressiveBulb(cx, cy, progress);
+  else if (doodle == "TARGET") drawProgressiveTarget(cx, cy, progress);
+  else if (doodle == "ARROW") drawProgressiveArrow(4, cy - 4, cx - 2, cy - 2, progress);
+}
+
 void drawSketchbookScene() {
   unsigned long now = millis();
   unsigned long elapsed = now - sketchSceneStartMs;
@@ -839,7 +984,7 @@ void drawSketchbookScene() {
   int focalY = 26;
   int focalXOffset = 0;
   
-  // Dynamic Semantic Motion Physics & Subtle Life Breathing
+  // Dynamic Harmonic Breathing
   float breathe = sin(now * 0.006f) * 1.2f;
   
   if (sketchMetaphor == "FALLING") {
@@ -856,65 +1001,148 @@ void drawSketchbookScene() {
     focalY += (int)breathe;
   }
   
-  // Draw Subtle Living Dust Particles in background
+  // Ambient Canvas Particles
   drawLivingCanvas();
 
-  // Dynamic Font Pairing Logic based on selected FontStyle or Dynamic Mix Preset
+  // FX: Corner Frames
+  if (sketchFxFlags & 2) {
+    drawCornerFrames(rawProgress);
+  }
+
+  // FX: Left Accent Bar
+  if (sketchFxFlags & 4) {
+    int barH = (int)(min(1.0f, rawProgress * 2.0f) * 38.0f);
+    display.fillRect(2, 4, 2, barH, SSD1306_WHITE);
+    minX = 8;
+    availWidth = 118;
+  }
+
+  // Dynamic Font Pairing Logic
   int prefixFont = 3; // Serif Italic 9pt
   int focalFont = 0;  // Serif Bold Italic 12pt
   int suffixFont = 3; // Serif Italic 9pt
 
   if (currentFontStyle == FONT_SANS) {
-    prefixFont = 4; focalFont = 1; suffixFont = 4; // Sans fonts
+    prefixFont = 4; focalFont = 1; suffixFont = 4;
   } else if (currentFontStyle == FONT_SERIF) {
-    prefixFont = 3; focalFont = 2; suffixFont = 3; // Classic serif
+    prefixFont = 3; focalFont = 2; suffixFont = 3;
   } else if (currentFontStyle == FONT_MONO) {
-    prefixFont = 5; focalFont = 5; suffixFont = 5; // Mono
+    prefixFont = 5; focalFont = 5; suffixFont = 5;
   } else if (currentFontStyle == FONT_ARCADE) {
-    prefixFont = 6; focalFont = 5; suffixFont = 6; // Arcade / Org_01
+    prefixFont = 6; focalFont = 5; suffixFont = 6;
   } else if (currentFontStyle == FONT_MIX) {
-    // Dynamic Pairings according to scene fontPreset!
-    if (sketchFontPreset == 1) { prefixFont = 3; focalFont = 1; suffixFont = 4; } // Script + Bold Sans + Sans
-    else if (sketchFontPreset == 2) { prefixFont = 4; focalFont = 2; suffixFont = 3; } // Sans + Serif Bold + Script
-    else if (sketchFontPreset == 3) { prefixFont = 5; focalFont = 0; suffixFont = 5; } // Mono + Script + Mono
-    else if (sketchFontPreset == 4) { prefixFont = 6; focalFont = 1; suffixFont = 6; } // Tiny + Bold Sans + Tiny
-    else { prefixFont = 3; focalFont = 0; suffixFont = 3; } // Double Script
+    if (sketchFontPreset == 1) { prefixFont = 3; focalFont = 1; suffixFont = 4; }
+    else if (sketchFontPreset == 2) { prefixFont = 4; focalFont = 2; suffixFont = 3; }
+    else if (sketchFontPreset == 3) { prefixFont = 5; focalFont = 0; suffixFont = 5; }
+    else if (sketchFontPreset == 4) { prefixFont = 6; focalFont = 1; suffixFont = 6; }
+    else if (sketchFontPreset == 5) { prefixFont = 4; focalFont = 0; suffixFont = 5; }
+    else { prefixFont = 3; focalFont = 0; suffixFont = 3; }
   }
 
-  // 1. Render Prefix
-  if (sketchPrefix.length() > 0 && sketchComposition != "ISOLATED") {
-    const GFXfont* pFont = (prefixFont == 0) ? &FreeSerifBoldItalic12pt7b : ((prefixFont == 1) ? &FreeSansBold12pt7b : ((prefixFont == 2) ? &FreeSerifBold12pt7b : ((prefixFont == 4) ? &FreeSans9pt7b : ((prefixFont == 5) ? &FreeMonoBold9pt7b : ((prefixFont == 6) ? &Org_01 : &FreeSerifItalic9pt7b)))));
-    display.setFont(pFont);
+  // ==========================================
+  // COMPOSITIONAL ARCHETYPE DISPATCH
+  // ==========================================
+
+  if (sketchComposition == "MONOLITH") {
+    // Monolith: Giant centered word with corner doodles
+    display.setFont(&FreeSansBold18pt7b);
+    int16_t x1, y1; uint16_t fw, fh;
+    display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+    if (fw > availWidth) {
+      display.setFont(&FreeSansBold12pt7b);
+      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+    }
+    int fx = minX + (availWidth - (int)fw) / 2;
+    int fy = 30 + (int)breathe;
+    drawProgressiveText(sketchFocalWord, fx, fy, 1, rawProgress);
+    if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, rawProgress);
+    if (sketchDoodle != "NONE") drawDoodle(sketchDoodle, min(120, fx + fw + 10), fy - 6, rawProgress, now);
+    return;
+  }
+
+  if (sketchComposition == "DIAGONAL") {
+    // Diagonal Cascade: Top-Left -> Center -> Bottom-Right
+    if (sketchPrefix.length() > 0) {
+      drawProgressiveText(sketchPrefix, minX + 2, 10, prefixFont, rawProgress);
+      display.drawPixel(minX + 30, 14, SSD1306_WHITE);
+      display.drawPixel(minX + 40, 18, SSD1306_WHITE);
+    }
+    if (sketchFocalWord.length() > 0) {
+      display.setFont(&FreeSerifBoldItalic12pt7b);
+      int16_t x1, y1; uint16_t fw, fh;
+      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+      int fx = minX + 35 + focalXOffset;
+      if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
+      drawProgressiveText(sketchFocalWord, fx, 26, focalFont, rawProgress);
+      if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, 29, rawProgress);
+      if (sketchDoodle != "NONE") drawDoodle(sketchDoodle, min(120, fx + fw + 8), 24, rawProgress, now);
+    }
+    if (sketchSuffix.length() > 0) {
+      display.setFont(&FreeSerifItalic9pt7b);
+      int16_t x1, y1; uint16_t sw, sh;
+      display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
+      int sx = max(minX, 126 - (int)sw);
+      drawProgressiveText(sketchSuffix, sx, 42, suffixFont, rawProgress);
+    }
+    return;
+  }
+
+  if (sketchComposition == "SPLIT") {
+    // Split Screen: Prefix Top-Left, Suffix Bottom-Right, Doodle Center
+    if (sketchPrefix.length() > 0) drawProgressiveText(sketchPrefix, minX + 2, 11, prefixFont, rawProgress);
+    if (sketchFocalWord.length() > 0) {
+      display.setFont(&FreeSerifBoldItalic12pt7b);
+      int16_t x1, y1; uint16_t fw, fh;
+      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+      int fx = minX + (availWidth - (int)fw) / 2 + focalXOffset;
+      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
+      if (sketchDoodle != "NONE") drawDoodle(sketchDoodle, fx + fw + 8, focalY - 6, rawProgress, now);
+    }
+    if (sketchSuffix.length() > 0) {
+      display.setFont(&FreeSerifItalic9pt7b);
+      int16_t x1, y1; uint16_t sw, sh;
+      display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
+      int sx = max(minX, 126 - (int)sw);
+      drawProgressiveText(sketchSuffix, sx, 42, suffixFont, rawProgress);
+    }
+    return;
+  }
+
+  // STANDARD SKETCHBOOK / CENTER / STACKED / INVERSE
+  if (sketchPrefix.length() > 0) {
+    display.setFont(&FreeSerifItalic9pt7b);
     int16_t x1, y1; uint16_t pw, ph;
     display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
-    
-    int px = minX + (availWidth - (int)pw) / 2;
-    if (sketchComposition == "DIAGONAL") px = minX + 2;
-    
+    int px = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
     drawProgressiveText(sketchPrefix, max(minX, px), 11, prefixFont, rawProgress);
   }
   
-  // 2. Render Focal Word with Dynamic Typography & Vector Doodles
   if (sketchFocalWord.length() > 0) {
-    const GFXfont* fFont = (focalFont == 1) ? &FreeSansBold12pt7b : ((focalFont == 2) ? &FreeSerifBold12pt7b : ((focalFont == 5) ? &FreeMonoBold12pt7b : &FreeSerifBoldItalic12pt7b));
-    display.setFont(fFont);
+    display.setFont(&FreeSerifBoldItalic12pt7b);
     int16_t x1, y1; uint16_t fw, fh;
     display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
     
-    // Scale down if word is too wide for screen
     if (fw > availWidth) {
       focalFont = (focalFont == 1) ? 4 : ((focalFont == 5) ? 5 : 3);
       display.setFont(&FreeSerifBoldItalic9pt7b);
       display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
     }
     
-    int fx = minX + (availWidth - (int)fw) / 2 + focalXOffset;
+    int fx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2 + focalXOffset;
     if (fx < minX) fx = minX;
     
-    drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
+    // FX: Inverse Badge
+    if (sketchFxFlags & 1) {
+      display.fillRect(fx - 3, focalY - fh - 2, fw + 6, fh + 5, SSD1306_WHITE);
+      display.setTextColor(SSD1306_BLACK);
+      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
+      display.setTextColor(SSD1306_WHITE);
+    } else {
+      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
+    }
     
     // Hand-Drawn Wobbly Underline
-    if (sketchUnderline) {
+    if (sketchUnderline && !(sketchFxFlags & 1)) {
       drawProgressiveUnderline(fx - 2, fx + fw + 2, focalY + 3, rawProgress);
     }
     
@@ -938,47 +1166,19 @@ void drawSketchbookScene() {
       drawProgressiveWave(minX, minX + availWidth, 44, rawProgress, now);
     }
 
-    // Procedural Semantic Vector Doodles!
-    if (sketchDoodle == "ROSE") {
-      drawProgressiveRose(fx + fw + 8, focalY - 6, rawProgress);
-    } else if (sketchDoodle == "HEART") {
-      drawProgressiveHeart(fx + fw + 8, focalY - 8, rawProgress, now);
-    } else if (sketchDoodle == "NOTE") {
-      drawProgressiveNotes(fx + fw + 8, focalY - 6, rawProgress, now);
-    } else if (sketchDoodle == "STAR") {
-      drawProgressiveStar(fx - 8, focalY - 10, rawProgress);
-      drawProgressiveStar(fx + fw + 8, focalY + 2, rawProgress);
-    } else if (sketchDoodle == "FIRE") {
-      drawProgressiveFlame(fx + fw + 8, focalY, rawProgress, now);
-    } else if (sketchDoodle == "RAIN") {
-      drawProgressiveRain(0, 0, 128, 46, rawProgress, now);
-    } else if (sketchDoodle == "BROKEN") {
-      drawProgressiveBroken(fx + fw + 7, focalY - 6, rawProgress);
-    } else if (sketchDoodle == "WINGS") {
-      drawProgressiveWings(fx + fw + 8, focalY - 6, rawProgress, now);
-    } else if (sketchDoodle == "SUN") {
-      drawProgressiveSun(fx + fw + 8, focalY - 6, rawProgress);
-    } else if (sketchDoodle == "LIGHTNING") {
-      drawProgressiveLightning(fx + fw + 7, focalY - 6, rawProgress);
-    } else if (sketchDoodle == "EYE") {
-      drawProgressiveEye(fx + fw + 8, focalY - 6, rawProgress);
-    } else if (sketchDoodle == "MOON") {
-      drawProgressiveMoon(fx + fw + 8, focalY - 6, rawProgress);
-    } else if (sketchDoodle == "ARROW") {
-      drawProgressiveArrow(minX + 2, focalY - 10, fx - 4, focalY - 4, rawProgress);
+    // Procedural Semantic Doodles
+    if (sketchDoodle != "NONE" && sketchDoodle != "CIRCLE" && sketchDoodle != "BOX" && sketchDoodle != "BUBBLE" && sketchDoodle != "WAVE" && sketchDoodle != "UNDERLINE") {
+      int dx = min(120, fx + fw + 8);
+      int dy = focalY - 6;
+      drawDoodle(sketchDoodle, dx, dy, rawProgress, now);
     }
   }
   
-  // 3. Render Suffix
-  if (sketchSuffix.length() > 0 && sketchComposition != "ISOLATED") {
-    const GFXfont* sFont = (suffixFont == 4) ? &FreeSans9pt7b : ((suffixFont == 5) ? &FreeMonoBold9pt7b : ((suffixFont == 6) ? &Org_01 : &FreeSerifItalic9pt7b));
-    display.setFont(sFont);
+  if (sketchSuffix.length() > 0) {
+    display.setFont(&FreeSerifItalic9pt7b);
     int16_t x1, y1; uint16_t sw, sh;
     display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
-    
-    int sx = minX + (availWidth - (int)sw) / 2;
-    if (sketchComposition == "DIAGONAL") sx = minX + availWidth - (int)sw - 2;
-    
+    int sx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
     drawProgressiveText(sketchSuffix, max(minX, sx), 42, suffixFont, rawProgress);
   }
 }
@@ -1012,7 +1212,7 @@ void parseSerialData(String data) {
     }
   }
   else if (data.startsWith("K|")) {
-    // Protocol: K|<metaphor>|<doodle>|<composition>|<focal>|<prefix>|<suffix>|<tilt>|<underline>|<durationMs>|<fontPreset>
+    // Protocol: K|<metaphor>|<doodle>|<composition>|<focal>|<prefix>|<suffix>|<tilt>|<underline>|<durationMs>|<fontPreset>|<fxFlags>
     int p1 = data.indexOf('|', 2);
     int p2 = data.indexOf('|', p1 + 1);
     int p3 = data.indexOf('|', p2 + 1);
@@ -1022,6 +1222,7 @@ void parseSerialData(String data) {
     int p7 = data.indexOf('|', p6 + 1);
     int p8 = data.indexOf('|', p7 + 1);
     int p9 = data.indexOf('|', p8 + 1);
+    int p10 = (p9 > 0) ? data.indexOf('|', p9 + 1) : -1;
     
     if (p1 > 0 && p2 > 0 && p3 > 0 && p4 > 0 && p5 > 0 && p6 > 0 && p7 > 0 && p8 > 0) {
       sketchMetaphor = data.substring(2, p1);
@@ -1032,12 +1233,20 @@ void parseSerialData(String data) {
       sketchSuffix = data.substring(p5 + 1, p6);
       sketchTilt = data.substring(p6 + 1, p7).toInt();
       sketchUnderline = (data.substring(p7 + 1, p8).toInt() == 1);
+      
       if (p9 > 0) {
         sketchDurationMs = data.substring(p8 + 1, p9).toInt();
-        sketchFontPreset = data.substring(p9 + 1).toInt();
+        if (p10 > 0) {
+          sketchFontPreset = data.substring(p9 + 1, p10).toInt();
+          sketchFxFlags = data.substring(p10 + 1).toInt();
+        } else {
+          sketchFontPreset = data.substring(p9 + 1).toInt();
+          sketchFxFlags = 0;
+        }
       } else {
         sketchDurationMs = data.substring(p8 + 1).toInt();
         sketchFontPreset = 0;
+        sketchFxFlags = 0;
       }
       sketchSceneStartMs = millis();
     }
@@ -1208,7 +1417,6 @@ void drawCachedLyric(const LyricLayout& layout, int ySlide) {
       display.setCursor(layout.lineStartX[i], lineY);
       display.print(layout.lines[i]);
       
-      // Highlight Logic for Sliding Mode
       if (isSlidingMode && highlightWordIndex >= 0) {
         String words[20];
         int numWords = 0;
@@ -1278,7 +1486,6 @@ void loop() {
           textWidth = headerText.length() * 6;
       }
       
-      // Auto-center when text fits completely (e.g. Disease - Justin Bieber)
       if (textWidth <= 128) {
         marqueeX = (128 - textWidth) / 2;
       } else {
@@ -1352,7 +1559,6 @@ void loop() {
   int barWidth = (currentProg / durationMs) * 128;
 
   if (isTwoLineSongInfo) {
-    // 2-Line High-Density Static Layout with ZERO bottom padding!
     display.setFont(NULL);
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
@@ -1371,11 +1577,10 @@ void loop() {
     display.setCursor(aX, 55);
     display.print(art);
     
-    // Progress Bar pinned right down to the South edge (Y=62, Height=2, 0px bottom padding!)
+    // Progress Bar pinned right down to South edge (Y=62, Height=2, 0px bottom padding!)
     display.drawFastHLine(0, 62, 128, SSD1306_WHITE);
     display.fillRect(0, 62, barWidth, 2, SSD1306_WHITE);
   } else {
-    // 1-Line Scrolling Marquee Layout
     String headerText = songTitle;
     if (songArtist.length() > 0 && songArtist != "Unknown") headerText += " - " + songArtist;
     
