@@ -461,11 +461,22 @@
         </div>
 
         <div class="form-group">
-            <label>Active Font</label>
+            <label>Typography Style</label>
             <select id="font-select">
-                <option value="default">System Default</option>
-                <option value="pixel">Pixelated (Retro)</option>
-                <option value="smooth">Smooth Rounded</option>
+                <option value="handwritten" selected>✍️ Handwritten Script (Insta / TikTok Style ✨)</option>
+                <option value="sans">🔤 Modern Clean (FreeSans)</option>
+                <option value="mono">💻 Retro Monospace (FreeMono)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Animated Mascot / Companion (GIF Style)</label>
+            <select id="companion-select">
+                <option value="cat" selected>🐱 Lo-Fi Cat (Headphones & Paws)</option>
+                <option value="vibe">🎧 Vibe Dude (Head-Bobbing Dancer)</option>
+                <option value="vinyl">💿 Spinning Vinyl Record</option>
+                <option value="ghost">👻 Bouncing Pixel Ghost</option>
+                <option value="none">❌ Off (Full Width Text)</option>
             </select>
         </div>
 
@@ -565,7 +576,8 @@
             captionMode: document.getElementById('caption-mode-select').value,
             logo: document.querySelector('input[name="logo"]:checked').value,
             uiScale: document.getElementById('ui-scale').value,
-            font: document.getElementById('font-select').value
+            font: document.getElementById('font-select').value,
+            companion: document.getElementById('companion-select').value
         };
 
         try {
