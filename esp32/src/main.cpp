@@ -181,7 +181,7 @@ void drawLivingCanvas() {
     for (int i = 0; i < 3; i++) {
       int px = (int)((t / (30 + i * 15) + i * 43) % 126);
       int py = (int)(10 + sin(t * 0.003f + i * 2.0f) * 6.0f + i * 11);
-      if (py >= 2 && py <= 45) {
+      if (py >= 2 && py <= 44) {
         display.drawPixel(px, py, SSD1306_WHITE);
         display.drawPixel(px - 1, py, SSD1306_WHITE);
         display.drawPixel(px + 1, py, SSD1306_WHITE);
@@ -193,13 +193,13 @@ void drawLivingCanvas() {
     for (int i = 0; i < 4; i++) {
       int px = (int)((t / (25 + i * 20) + i * 35) % 126);
       int py = (int)(6 + sin(t * 0.002f + i * 1.5f) * 8.0f + i * 10);
-      if (py >= 2 && py <= 45) display.drawPixel(px, py, SSD1306_WHITE);
+      if (py >= 2 && py <= 44) display.drawPixel(px, py, SSD1306_WHITE);
     }
   } else if (currentParticleStyle == PARTICLE_STARS) {
     for (int i = 0; i < 2; i++) {
       int px = (int)((t / (40 + i * 25) + i * 60) % 124) + 2;
       int py = (int)(12 + sin(t * 0.004f + i * 3.0f) * 6.0f + i * 16);
-      if (py >= 4 && py <= 43) {
+      if (py >= 4 && py <= 42) {
         display.drawLine(px - 2, py, px + 2, py, SSD1306_WHITE);
         display.drawLine(px, py - 2, px, py + 2, SSD1306_WHITE);
       }
@@ -207,13 +207,13 @@ void drawLivingCanvas() {
   } else if (currentParticleStyle == PARTICLE_BUBBLES) {
     for (int i = 0; i < 3; i++) {
       int px = (int)((i * 45 + 15) % 120);
-      int py = 45 - (int)((t / (18 + i * 5) + i * 14) % 45);
-      if (py >= 2 && py <= 45) display.drawCircle(px, py, 1 + (i % 2), SSD1306_WHITE);
+      int py = 43 - (int)((t / (18 + i * 5) + i * 14) % 43);
+      if (py >= 2 && py <= 43) display.drawCircle(px, py, 1 + (i % 2), SSD1306_WHITE);
     }
   } else if (currentParticleStyle == PARTICLE_RAIN) {
     for (int i = 0; i < 4; i++) {
       int px = (int)((i * 33 + (t / 15)) % 126);
-      int py = (int)((t / 10 + i * 12) % 45);
+      int py = (int)((t / 10 + i * 12) % 43);
       display.drawLine(px, py, px - 1, py + 2, SSD1306_WHITE);
     }
   }
@@ -223,7 +223,6 @@ void drawLivingCanvas() {
 // 50+ PROCEDURAL VECTOR DOODLE ARSENAL
 // ==========================================
 
-// Classic Vintage Telephone Receiver & Cord
 void drawProgressiveTelephone(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   display.drawLine(cx - 5, cy - 2, cx + 5, cy - 2, SSD1306_WHITE);
@@ -238,7 +237,6 @@ void drawProgressiveTelephone(int cx, int cy, float progress) {
   }
 }
 
-// Context-Aware Directional Arrows
 void drawProgressiveDownArrow(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   display.drawLine(cx, cy - 5, cx, cy + 3, SSD1306_WHITE);
@@ -527,7 +525,7 @@ void drawProgressiveTarget(int cx, int cy, float progress) {
 void drawProgressiveAnchor(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
   display.drawCircle(cx, cy - 3, 1, SSD1306_WHITE);
-  display.drawLine(cx, cy - 2, cx, cy + 4, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy + 4, cx - 2, cy + 4, SSD1306_WHITE);
   display.drawLine(cx - 4, cy + 1, cx + 4, cy + 1, SSD1306_WHITE);
   display.drawLine(cx - 4, cy + 1, cx - 4, cy + 3, SSD1306_WHITE);
   display.drawLine(cx + 4, cy + 1, cx + 4, cy + 3, SSD1306_WHITE);
@@ -759,10 +757,10 @@ void drawCornerFrames(float progress) {
   display.drawLine(2, 2, 2, 2 + len, SSD1306_WHITE);
   display.drawLine(125, 2, 125 - len, 2, SSD1306_WHITE);
   display.drawLine(125, 2, 125, 2 + len, SSD1306_WHITE);
-  display.drawLine(2, 45, 2 + len, 45, SSD1306_WHITE);
-  display.drawLine(2, 45, 2, 45 - len, SSD1306_WHITE);
-  display.drawLine(125, 45, 125 - len, 45, SSD1306_WHITE);
-  display.drawLine(125, 45, 125, 45 - len, SSD1306_WHITE);
+  display.drawLine(2, 44, 2 + len, 44, SSD1306_WHITE);
+  display.drawLine(2, 44, 2, 44 - len, SSD1306_WHITE);
+  display.drawLine(125, 44, 125 - len, 44, SSD1306_WHITE);
+  display.drawLine(125, 44, 125, 44 - len, SSD1306_WHITE);
 }
 
 void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now) {
@@ -778,7 +776,7 @@ void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now
   else if (doodle == "NOTE") drawProgressiveNotes(cx, cy, progress, now);
   else if (doodle == "STAR") { drawProgressiveStar(cx - 5, cy - 3, progress); drawProgressiveStar(cx + 5, cy + 3, progress); }
   else if (doodle == "FIRE") drawProgressiveFlame(cx, cy, progress, now);
-  else if (doodle == "RAIN") drawProgressiveRain(0, 0, 128, 46, progress, now);
+  else if (doodle == "RAIN") drawProgressiveRain(0, 0, 128, 44, progress, now);
   else if (doodle == "BROKEN") drawProgressiveBroken(cx, cy, progress);
   else if (doodle == "WINGS") drawProgressiveWings(cx, cy, progress, now);
   else if (doodle == "BUTTERFLY") drawProgressiveButterfly(cx, cy, progress, now);
@@ -1148,7 +1146,7 @@ void drawParticles() {
 }
 
 // ==========================================
-// PROCEDURAL SKETCHBOOK SCENE ENGINE (100% Lyrics Preserved & Auto-Fit)
+// PROCEDURAL SKETCHBOOK SCENE ENGINE (Strict 128x48 Pixel Geometry)
 // ==========================================
 void drawSketchbookScene() {
   unsigned long now = millis();
@@ -1171,36 +1169,36 @@ void drawSketchbookScene() {
     sketchComposition = "CENTER";
   }
 
-  // Dynamic Vertical Alignment Baseline Calculation (No more clipping on Y=0!)
-  int prefixY = 13;
-  int focalY = 28;
-  int suffixY = 43;
+  // Strict 128x48 Blue Zone Vertical Alignment (Never clips top Y=0 or overlaps bottom Y=48!)
+  int prefixY = 11;
+  int focalY = 26;
+  int suffixY = 41;
 
   if (hasPrefix && hasFocal && hasSuffix) {
-    prefixY = 12;
-    focalY = 28;
-    suffixY = 43;
+    prefixY = 11;
+    focalY = 26;
+    suffixY = 41;
   } else if (hasPrefix && hasFocal && !hasSuffix) {
-    prefixY = 15;
-    focalY = 35;
+    prefixY = 14;
+    focalY = 33;
   } else if (!hasPrefix && hasFocal && hasSuffix) {
-    focalY = 20;
-    suffixY = 38;
+    focalY = 17;
+    suffixY = 36;
   } else if (!hasPrefix && hasFocal && !hasSuffix) {
-    focalY = 28; // Perfectly centered vertically!
+    focalY = 27; // Perfectly centered vertically!
   }
   
   int focalXOffset = 0;
   float breathe = sin(now * 0.006f) * 1.0f;
   
   if (sketchMetaphor == "FALLING") {
-    focalY += (int)(-10 + easeOutBounce(enterT) * 10.0f);
+    focalY += (int)(-6 + easeOutBounce(enterT) * 6.0f);
   } else if (sketchMetaphor == "FLYING") {
-    focalY += (int)(10 - easeOutQuad(enterT) * 10.0f);
+    focalY += (int)(6 - easeOutQuad(enterT) * 6.0f);
   } else if (sketchMetaphor == "RUNNING") {
-    focalXOffset = (int)(-20 + enterEased * 20.0f);
+    focalXOffset = (int)(-16 + enterEased * 16.0f);
   } else if (sketchMetaphor == "SPINNING") {
-    focalXOffset = (int)(sin(rawProgress * 12.0f) * 4.0f);
+    focalXOffset = (int)(sin(rawProgress * 12.0f) * 3.0f);
   } else if (sketchMetaphor == "SHAKE") {
     focalXOffset = (int)(sin(now * 0.05f) * 2.0f);
   } else {
@@ -1214,7 +1212,7 @@ void drawSketchbookScene() {
   }
 
   if (sketchFxFlags & 4) {
-    int barH = (int)(min(1.0f, rawProgress * 2.0f) * 36.0f);
+    int barH = (int)(min(1.0f, rawProgress * 2.0f) * 34.0f);
     display.fillRect(2, 4, 2, barH, SSD1306_WHITE);
     minX = 7;
     availWidth = 119;
@@ -1264,7 +1262,9 @@ void drawSketchbookScene() {
       }
     }
     int fx = minX + (availWidth - (int)fw) / 2;
-    int fy = 30 + (int)breathe;
+    if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
+    if (fx < minX) fx = minX;
+    int fy = 29 + (int)breathe;
     drawProgressiveText(sketchFocalWord, fx, fy, focalFont, rawProgress);
     if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, rawProgress);
     if (sketchDoodle != "NONE" && fx + fw + 14 <= 126) {
@@ -1282,7 +1282,9 @@ void drawSketchbookScene() {
       display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
       if (pw > 70) { prefixFont = 4; pFont = getFontByChoice(4); display.setFont(pFont); display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph); }
       if (pw > 70) { prefixFont = -1; pw = sketchPrefix.length() * 6; }
-      drawProgressiveText(sketchPrefix, minX + 2, prefixY, prefixFont, rawProgress);
+      int px = minX + 2;
+      if (px + pw > 126) px = max(minX, 126 - (int)pw);
+      drawProgressiveText(sketchPrefix, px, prefixY, prefixFont, rawProgress);
     }
     if (hasFocal) {
       const GFXfont* fFont = getFontByChoice(focalFont);
@@ -1295,8 +1297,9 @@ void drawSketchbookScene() {
         display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
         if (fw > 76) { focalFont = -1; fw = sketchFocalWord.length() * 6; }
       }
-      int fx = minX + (hasPrefix ? 28 : 10) + focalXOffset;
+      int fx = minX + (hasPrefix ? 24 : 8) + focalXOffset;
       if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
+      if (fx < minX) fx = minX;
       drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
       if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, focalY + 3, rawProgress);
       if (sketchDoodle != "NONE" && fx + fw + 12 <= 126) {
@@ -1325,7 +1328,9 @@ void drawSketchbookScene() {
       display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
       if (pw > availWidth) { prefixFont = 4; pFont = getFontByChoice(4); display.setFont(pFont); display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph); }
       if (pw > availWidth) { prefixFont = -1; pw = sketchPrefix.length() * 6; }
-      drawProgressiveText(sketchPrefix, minX + 2, prefixY, prefixFont, rawProgress);
+      int px = minX + 2;
+      if (px + pw > 126) px = max(minX, 126 - (int)pw);
+      drawProgressiveText(sketchPrefix, px, prefixY, prefixFont, rawProgress);
     }
     if (hasFocal) {
       const GFXfont* fFont = getFontByChoice(focalFont);
@@ -1339,6 +1344,8 @@ void drawSketchbookScene() {
         if (fw > availWidth) { focalFont = -1; fw = sketchFocalWord.length() * 6; }
       }
       int fx = minX + (availWidth - (int)fw) / 2 + focalXOffset;
+      if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
+      if (fx < minX) fx = minX;
       drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
       if (sketchDoodle != "NONE" && fx + fw + 12 <= 126) {
         drawDoodle(sketchDoodle, fx + fw + 7, focalY - 6, rawProgress, now);
@@ -1378,7 +1385,9 @@ void drawSketchbookScene() {
     }
     
     int px = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
-    drawProgressiveText(sketchPrefix, max(minX, px), prefixY, prefixFont, rawProgress);
+    if (px + pw > 126) px = max(minX, 126 - (int)pw);
+    if (px < minX) px = minX;
+    drawProgressiveText(sketchPrefix, px, prefixY, prefixFont, rawProgress);
   }
   
   if (hasFocal) {
@@ -1400,6 +1409,7 @@ void drawSketchbookScene() {
     }
     
     int fx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2 + focalXOffset;
+    if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
     if (fx < minX) fx = minX;
     
     // EXACT INVERSE BADGE MATH (Zero Clipping on 128x48!)
@@ -1410,7 +1420,11 @@ void drawSketchbookScene() {
       } else {
         bx = fx; by = focalY - 8; bw = fw; bh = 9;
       }
-      display.fillRect(bx - 3, by - 2, bw + 6, bh + 4, SSD1306_WHITE);
+      int rx = max(0, bx - 3);
+      int ry = max(0, by - 2);
+      int rw = min(128 - rx, bw + 6);
+      int rh = min(47 - ry, bh + 4);
+      display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
       display.setTextColor(SSD1306_BLACK);
       drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
       display.setTextColor(SSD1306_WHITE);
@@ -1420,32 +1434,36 @@ void drawSketchbookScene() {
     
     // Hand-Drawn Wobbly Underline
     if (sketchUnderline && !(sketchFxFlags & 1)) {
-      drawProgressiveUnderline(fx - 2, fx + fw + 2, focalY + 3, rawProgress);
+      int ux1 = max(minX, fx - 2);
+      int ux2 = min(126, fx + (int)fw + 2);
+      drawProgressiveUnderline(ux1, ux2, min(45, focalY + 3), rawProgress);
     }
     
     // Hand-Drawn Circle Loop
     if (sketchDoodle == "CIRCLE") {
-      drawProgressiveCircle(fx + fw/2, focalY - fh/2, fw/2 + 4, fh/2 + 3, rawProgress);
+      drawProgressiveCircle(fx + fw/2, focalY - fh/2, min(24, (int)fw/2 + 4), min(12, (int)fh/2 + 3), rawProgress);
     }
     
     // Hand-Drawn Box / Brackets
     if (sketchDoodle == "BOX") {
-      drawProgressiveBox(fx - 4, focalY - fh - 1, fx + fw + 4, focalY + 3, rawProgress);
+      int bx1 = max(minX, fx - 4);
+      int bx2 = min(126, fx + (int)fw + 4);
+      drawProgressiveBox(bx1, max(1, focalY - (int)fh - 1), bx2, min(45, focalY + 3), rawProgress);
     }
 
     // Hand-Drawn Thought Bubble
     if (sketchDoodle == "BUBBLE") {
-      drawProgressiveBubble(fx + fw/2, focalY - fh/2, fw/2 + 6, fh/2 + 4, rawProgress);
+      drawProgressiveBubble(fx + fw/2, focalY - fh/2, min(26, (int)fw/2 + 6), min(14, (int)fh/2 + 4), rawProgress);
     }
     
     // Heartbeat ECG Wave
     if (sketchDoodle == "WAVE") {
-      drawProgressiveWave(minX, minX + availWidth, 45, rawProgress, now);
+      drawProgressiveWave(minX, minX + availWidth, 44, rawProgress, now);
     }
 
     // 50+ Procedural Semantic Doodles
     if (sketchDoodle != "NONE" && sketchDoodle != "CIRCLE" && sketchDoodle != "BOX" && sketchDoodle != "BUBBLE" && sketchDoodle != "WAVE" && sketchDoodle != "UNDERLINE") {
-      int dx = fx + fw + 7;
+      int dx = fx + fw + 6;
       int dy = focalY - 6;
       if (dx + 12 > 126) {
         dx = max(4, fx - 14); // Flip to left if right side is full!
@@ -1473,7 +1491,9 @@ void drawSketchbookScene() {
     }
     
     int sx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
-    drawProgressiveText(sketchSuffix, max(minX, sx), suffixY, suffixFont, rawProgress);
+    if (sx + sw > 126) sx = max(minX, 126 - (int)sw);
+    if (sx < minX) sx = minX;
+    drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
   }
 }
 
@@ -1848,7 +1868,7 @@ void loop() {
     drawProgressiveStar(92, 16, 0.8f);
   }
   
-  // Mask overlaps onto Yellow Zone
+  // Mask overlaps onto Yellow Zone (row 48..63)
   display.fillRect(0, 48, 128, 16, SSD1306_BLACK); 
 
   // =====================================

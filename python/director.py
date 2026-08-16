@@ -188,7 +188,7 @@ class LyricDirector:
         suffix_str = " ".join(suffix_words).strip()
 
         # 4. Rich Compositional Archetypes (8 Archetypes!)
-        compositions = ["CENTER", "DIAGONAL", "STACKED", "MONOLITH", "INVERSE", "COMIC", "SPLIT", "DREAMY"]
+        compositions = ["CENTER", "DIAGONAL", "STACKED", "INVERSE", "COMIC", "SPLIT", "DREAMY"]
         
         # Smart assignment based on line characteristics
         if len(words) == 1:
