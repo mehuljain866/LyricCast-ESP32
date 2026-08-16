@@ -481,13 +481,10 @@
         </div>
 
         <div class="form-group">
-            <label>Animated Mascot / Companion (GIF Style)</label>
-            <select id="companion-select">
-                <option value="cat" selected>🐱 Lo-Fi Cat (Headphones & Paws)</option>
-                <option value="vibe">🎧 Vibe Dude (Head-Bobbing Dancer)</option>
-                <option value="vinyl">💿 Spinning Vinyl Record</option>
-                <option value="ghost">👻 Bouncing Pixel Ghost</option>
-                <option value="none">❌ Off (Full Width Text)</option>
+            <label>Song Info Display (Yellow Band)</label>
+            <select id="song-info-layout-select">
+                <option value="twoline" selected>📄 2-Line Static (Title & Artist + Bottom-Edge Progress Bar)</option>
+                <option value="marquee">📜 1-Line Scrolling Marquee (Auto-centers when short)</option>
             </select>
         </div>
 
@@ -588,7 +585,7 @@
             logo: document.querySelector('input[name="logo"]:checked').value,
             uiScale: document.getElementById('ui-scale').value,
             font: document.getElementById('font-select').value,
-            companion: document.getElementById('companion-select').value
+            songInfoLayout: document.getElementById('song-info-layout-select').value
         };
 
         try {

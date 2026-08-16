@@ -9,26 +9,30 @@ import random
 import hashlib
 
 METAPHORS = {
-    'falling': ['fall', 'falling', 'fell', 'drop', 'dropping', 'down', 'sink', 'sinking', 'drown', 'drowning', 'bottom'],
-    'flying': ['fly', 'flying', 'flew', 'float', 'floating', 'sky', 'clouds', 'high', 'rise', 'rising', 'up', 'heaven', 'space'],
-    'spinning': ['spin', 'spinning', 'rotate', 'round', 'around', 'circle', 'spiral', 'twist', 'whirl', 'roll'],
-    'running': ['run', 'running', 'ran', 'fast', 'speed', 'chase', 'chasing', 'escape', 'away', 'drive', 'driving', 'hurry'],
-    'broken': ['break', 'broken', 'breaking', 'tear', 'tearing', 'apart', 'shatter', 'crush', 'crack', 'pieces', 'split'],
-    'alone': ['alone', 'lonely', 'nobody', 'empty', 'silence', 'quiet', 'hollow', 'isolated', 'lost', 'darkness'],
+    'falling': ['fall', 'falling', 'fell', 'drop', 'dropping', 'down', 'sink', 'sinking', 'drown', 'drowning', 'bottom', 'low'],
+    'flying': ['fly', 'flying', 'flew', 'float', 'floating', 'sky', 'clouds', 'high', 'rise', 'rising', 'up', 'heaven', 'space', 'soar'],
+    'spinning': ['spin', 'spinning', 'rotate', 'round', 'around', 'circle', 'spiral', 'twist', 'whirl', 'roll', 'dance', 'dancing'],
+    'running': ['run', 'running', 'ran', 'fast', 'speed', 'chase', 'chasing', 'escape', 'away', 'drive', 'driving', 'hurry', 'rush'],
+    'broken': ['break', 'broken', 'breaking', 'tear', 'tearing', 'apart', 'shatter', 'crush', 'crack', 'pieces', 'split', 'bleed', 'hurt'],
+    'alone': ['alone', 'lonely', 'nobody', 'empty', 'silence', 'quiet', 'hollow', 'isolated', 'lost', 'darkness', 'dark'],
     'scream': ['scream', 'screaming', 'shout', 'shouting', 'loud', 'yell', 'noise', 'roar', 'wild', 'crazy', 'mad'],
     'stay': ['stay', 'hold', 'never', 'forever', 'always', 'stop', 'stand', 'freeze', 'wait', 'waiting'],
     'shake': ['shake', 'shaking', 'tremble', 'vibrate', 'quake', 'nervous', 'scared', 'fear']
 }
 
 DOODLE_MAP = {
-    'heart': ['love', 'loved', 'loving', 'heart', 'kiss', 'kissing', 'darling', 'baby', 'sweet', 'crush', 'desire', 'passion'],
-    'fire': ['fire', 'burn', 'burning', 'flame', 'flames', 'hot', 'heat', 'blaze', 'fever', 'smoke'],
-    'star': ['star', 'stars', 'night', 'moon', 'dream', 'dreams', 'shine', 'shining', 'glow', 'glowing', 'magic', 'spark', 'light', 'bright'],
-    'rain': ['rain', 'raining', 'cry', 'crying', 'tears', 'sad', 'storm', 'wash', 'wet', 'pour', 'drip'],
-    'lightning': ['lightning', 'electric', 'shock', 'strike', 'thunder', 'power', 'flash', 'energy', 'zap'],
-    'cloud': ['cloud', 'clouds', 'fog', 'breeze', 'wind', 'breath', 'air', 'fly'],
-    'eye': ['eye', 'eyes', 'look', 'looking', 'see', 'seeing', 'watch', 'stare', 'gaze', 'blind'],
-    'arrow': ['you', 'me', 'her', 'him', 'them', 'look', 'there', 'here', 'point', 'straight', 'direct']
+    'rose': ['rose', 'roses', 'flower', 'flowers', 'garden', 'petal', 'petals', 'bloom', 'blooming', 'blossom', 'beauty', 'bouquet'],
+    'heart': ['love', 'loved', 'loving', 'heart', 'kiss', 'kissing', 'darling', 'baby', 'sweet', 'crush', 'desire', 'passion', 'yours', 'mine'],
+    'fire': ['fire', 'burn', 'burning', 'flame', 'flames', 'hot', 'heat', 'blaze', 'fever', 'smoke', 'wild'],
+    'star': ['star', 'stars', 'night', 'moon', 'dream', 'dreams', 'shine', 'shining', 'glow', 'glowing', 'magic', 'spark', 'light', 'bright', 'sky'],
+    'rain': ['rain', 'raining', 'cry', 'crying', 'tears', 'sad', 'storm', 'wash', 'wet', 'pour', 'drip', 'teardrop', 'teardrops', 'water'],
+    'broken': ['break', 'broken', 'breaking', 'apart', 'shatter', 'crush', 'crack', 'pieces', 'split', 'bleed', 'hurt'],
+    'wings': ['fly', 'flying', 'wings', 'bird', 'birds', 'angel', 'soar', 'feather', 'free', 'freedom'],
+    'sun': ['sun', 'sunny', 'sunrise', 'sunset', 'daylight', 'morning', 'summer', 'gold', 'golden', 'warm', 'warmth'],
+    'lightning': ['lightning', 'electric', 'shock', 'strike', 'thunder', 'power', 'flash', 'energy', 'zap', 'voltage'],
+    'eye': ['eye', 'eyes', 'look', 'looking', 'see', 'seeing', 'watch', 'stare', 'gaze', 'blind', 'sight'],
+    'arrow': ['you', 'me', 'her', 'him', 'them', 'look', 'there', 'here', 'point', 'straight', 'direct', 'target'],
+    'circle': ['all', 'everything', 'world', 'forever', 'always', 'one', 'whole']
 }
 
 STOP_WORDS = {
@@ -48,7 +52,6 @@ class LyricDirector:
         self.chorus_counts = {}
         self.song_history = []
         
-        # Deterministic seed from Song Title & Artist
         seed_str = f"{song_title}-{artist}"
         hash_val = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest()[:8], 16)
         self.current_seed = hash_val & 0xFFFFFFFF
@@ -81,7 +84,7 @@ class LyricDirector:
             if detected_metaphor != "NORMAL":
                 break
 
-        # 2. Detect Doodle Keyword
+        # 2. Detect Semantic Doodle Keyword (e.g. roses -> ROSE, heart -> HEART)
         detected_doodle = "NONE"
         for doodle_type, triggers in DOODLE_MAP.items():
             for w in words:
@@ -91,10 +94,10 @@ class LyricDirector:
             if detected_doodle != "NONE":
                 break
 
-        # If no explicit doodle keyword, procedurally assign based on length
+        # If no explicit doodle keyword, assign based on line structure
         if detected_doodle == "NONE":
             if len(words) > 3 and random.random() < 0.40:
-                detected_doodle = random.choice(["UNDERLINE", "STAR", "ARROW"])
+                detected_doodle = random.choice(["UNDERLINE", "STAR", "CIRCLE", "ARROW"])
 
         # 3. Typographic Hierarchy (Focal Word Selection)
         focal_index = -1
@@ -109,7 +112,7 @@ class LyricDirector:
             if detected_metaphor != "NORMAL" and low_w in METAPHORS.get(detected_metaphor.lower(), []):
                 score += 15.0
             if detected_doodle != "NONE" and low_w in DOODLE_MAP.get(detected_doodle.lower(), []):
-                score += 12.0
+                score += 18.0
             if w.isupper() and len(w) > 1:
                 score += 10.0
             
@@ -136,7 +139,7 @@ class LyricDirector:
             composition = "ISOLATED"
         elif detected_metaphor == "FALLING" or detected_metaphor == "FLYING":
             composition = "DIAGONAL"
-        elif len(clean_text) > 35:
+        elif len(clean_text) > 32:
             composition = "STACKED"
 
         # 5. Dynamic Tilt Angle & Underline
@@ -144,21 +147,32 @@ class LyricDirector:
         if composition != "ISOLATED":
             tilt_angle = random.choice([-5, -3, 0, 3, 5])
             
-        has_underline = (detected_doodle == "UNDERLINE" or random.random() < 0.45) and len(focal_word) > 2
+        has_underline = (detected_doodle == "UNDERLINE" or random.random() < 0.40) and len(focal_word) > 2
 
         scene = {
             "type": "kinetic_scene",
-            "raw_text": clean_text,
-            "prefix": prefix_str,
+            "text": clean_text,
             "focal_word": focal_word,
+            "prefix": prefix_str,
             "suffix": suffix_str,
             "metaphor": detected_metaphor,
             "doodle": detected_doodle,
             "composition": composition,
-            "tilt_angle": tilt_angle,
             "has_underline": has_underline,
-            "duration_ms": int(duration * 1000),
-            "song_seed": self.current_seed
+            "tilt_angle": tilt_angle,
+            "duration_ms": max(1000, int(duration * 1000))
         }
-
+        
+        self.song_history.append(scene)
         return scene
+
+    def format_serial_packet(self, scene):
+        if scene["type"] == "idle":
+            return f"L|{scene['text']}|\n"
+            
+        return (
+            f"K|{scene['metaphor']}|{scene['doodle']}|{scene['composition']}|"
+            f"{scene['focal_word']}|{scene['prefix']}|{scene['suffix']}|"
+            f"{scene['tilt_angle']}|{1 if scene['has_underline'] else 0}|"
+            f"{scene['duration_ms']}\n"
+        )

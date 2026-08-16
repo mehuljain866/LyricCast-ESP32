@@ -191,7 +191,7 @@ async def main():
     last_sent_mode = ""
     last_sent_word_index = -1
     last_sent_font = ""
-    last_sent_companion = ""
+    last_sent_info_layout = ""
 
     while True:
         try:
@@ -238,18 +238,20 @@ async def main():
                     last_metadata_time = now
                     ser.write(f"M|{title}|{artist}|{pos_ms:.0f}|{dur_ms:.0f}\n".encode('utf-8', 'replace'))
 
+                # Send song info layout updates if changed (2-Line static vs Marquee)
+                current_info_layout = CURRENT_SETTINGS.get('songInfoLayout', 'twoline')
+                if current_info_layout != last_sent_info_layout:
+                    if current_info_layout == 'twoline':
+                        ser.write(f"I|TWOLINE\n".encode('utf-8', 'replace'))
+                    else:
+                        ser.write(f"I|MARQUEE\n".encode('utf-8', 'replace'))
+                    last_sent_info_layout = current_info_layout
+
                 # Send font updates if changed
                 current_font = CURRENT_SETTINGS.get('font', 'handwritten')
                 if current_font != last_sent_font:
                     ser.write(f"F|{current_font.upper()}\n".encode('utf-8', 'replace'))
                     last_sent_font = current_font
-                    last_sent_text = "" 
-
-                # Send companion mascot updates if changed
-                current_comp = CURRENT_SETTINGS.get('companion', 'cat')
-                if current_comp != last_sent_companion:
-                    ser.write(f"C|{current_comp.upper()}\n".encode('utf-8', 'replace'))
-                    last_sent_companion = current_comp
                     last_sent_text = "" 
 
                 # Send mode updates if changed
