@@ -10,17 +10,16 @@
 #include <Fonts/FreeSans12pt7b.h>
 #include <Fonts/FreeSans9pt7b.h>
 
-// Handwritten / Aesthetic Script Fonts (Insta & TikTok Cursive Style)
-#include <Fonts/FreeSerifItalic24pt7b.h>
-#include <Fonts/FreeSerifItalic18pt7b.h>
-#include <Fonts/FreeSerifItalic12pt7b.h>
+// Handwritten / Aesthetic Script Fonts
+#include <Fonts/FreeSerifBoldItalic18pt7b.h>
+#include <Fonts/FreeSerifBoldItalic12pt7b.h>
+#include <Fonts/FreeSerifBoldItalic9pt7b.h>
 #include <Fonts/FreeSerifItalic9pt7b.h>
 
 // Retro Monospace Fonts
 #include <Fonts/FreeMonoBold18pt7b.h>
 #include <Fonts/FreeMonoBold12pt7b.h>
 #include <Fonts/FreeMonoBold9pt7b.h>
-#include <Fonts/FreeMono9pt7b.h>
 
 #define OLED_WIDTH   128
 #define OLED_HEIGHT  64
@@ -59,11 +58,11 @@ FontStyle currentFontStyle = FONT_HANDWRITTEN;
 const GFXfont* sansFonts[] = {&FreeSans24pt7b, &FreeSans18pt7b, &FreeSans12pt7b, &FreeSans9pt7b, NULL};
 int sansHeights[] = {36, 26, 18, 14, 8};
 
-const GFXfont* scriptFonts[] = {&FreeSerifItalic24pt7b, &FreeSerifItalic18pt7b, &FreeSerifItalic12pt7b, &FreeSerifItalic9pt7b, NULL};
-int scriptHeights[] = {36, 26, 18, 14, 8};
+const GFXfont* scriptFonts[] = {&FreeSerifBoldItalic18pt7b, &FreeSerifBoldItalic12pt7b, &FreeSerifBoldItalic9pt7b, &FreeSerifItalic9pt7b, NULL};
+int scriptHeights[] = {28, 20, 15, 12, 9};
 
-const GFXfont* monoFonts[] = {&FreeMonoBold18pt7b, &FreeMonoBold18pt7b, &FreeMonoBold12pt7b, &FreeMonoBold9pt7b, NULL};
-int monoHeights[] = {30, 26, 18, 14, 8};
+const GFXfont* monoFonts[] = {&FreeMonoBold18pt7b, &FreeMonoBold12pt7b, &FreeMonoBold9pt7b, NULL, NULL};
+int monoHeights[] = {26, 18, 14, 10, 8};
 
 const GFXfont** getActiveFonts() {
   if (currentFontStyle == FONT_HANDWRITTEN) return scriptFonts;
@@ -261,10 +260,12 @@ void drawCompanion(int x, int y) {
 // Dynamic Font Caching Structures
 struct LyricLayout {
   bool isInternational;
-  const GFXfont* font;         // For English
-  const uint8_t* u8g2_font;    // For International
+  bool isScriptU8g2;
+  const GFXfont* font;         // For GFX English
+  const uint8_t* u8g2_font;    // For U8g2 (International or Compact Script)
   int lineCount;
   String lines[6];
+  int lineStartX[6];
   int startX;
   int startY;
   int lineHeight;
@@ -292,10 +293,13 @@ LyricLayout calculateLayout(String text) {
   LyricLayout layout;
   layout.lineCount = 0;
   layout.font = NULL;
+  layout.u8g2_font = NULL;
+  layout.isScriptU8g2 = false;
   layout.isInternational = hasInternationalChars(text);
   
-  int maxWidth = (currentCompanion != COMPANION_NONE) ? 98 : 128;
-  layout.startX = (currentCompanion != COMPANION_NONE) ? 28 : 0;
+  int maxWidth = (currentCompanion != COMPANION_NONE) ? 98 : 124;
+  layout.startX = (currentCompanion != COMPANION_NONE) ? 28 : 2;
+  int availWidth = 128 - layout.startX;
   
   if (text.length() == 0) {
     layout.isInternational = false;
@@ -303,6 +307,7 @@ LyricLayout calculateLayout(String text) {
     return layout;
   }
 
+  // --- INTERNATIONAL UNIFONT HANDLER ---
   if (layout.isInternational) {
     if (isCyrillic(text)) {
       layout.u8g2_font = u8g2_font_unifont_t_cyrillic;
@@ -341,10 +346,16 @@ LyricLayout calculateLayout(String text) {
     }
     
     layout.lineCount = lineCount;
-    for (int k=0; k<lineCount; k++) layout.lines[k] = lines[k];
+    for (int k=0; k<lineCount; k++) {
+      layout.lines[k] = lines[k];
+      int lw = u8g2_gfx.getUTF8Width(lines[k].c_str());
+      int lx = layout.startX + (availWidth - lw) / 2;
+      layout.lineStartX[k] = max(layout.startX, lx);
+    }
     
     int totalHeight = lineCount * layout.lineHeight;
-    layout.startY = 24 - (totalHeight / 2) + layout.lineHeight - 4;
+    int topY = max(0, (48 - totalHeight) / 2);
+    layout.startY = topY + layout.lineHeight - 3;
     return layout;
   }
 
@@ -357,8 +368,17 @@ LyricLayout calculateLayout(String text) {
     const GFXfont* testFont = fonts[f];
     int testLineHeight = heights[f];
     
-    display.setFont(testFont);
-    if (testFont == NULL) display.setTextSize(1);
+    // In Handwritten mode, use Victorian Cursive Script instead of ugly 5x7 basic font!
+    bool useScriptU8 = (currentFontStyle == FONT_HANDWRITTEN && isSmallestFallback);
+    
+    if (useScriptU8) {
+      layout.u8g2_font = u8g2_font_victoriabold8_8u;
+      u8g2_gfx.setFont(layout.u8g2_font);
+      testLineHeight = 11;
+    } else {
+      display.setFont(testFont);
+      if (testFont == NULL) display.setTextSize(1);
+    }
     
     String lines[6];
     int lineCount = 0;
@@ -372,12 +392,29 @@ LyricLayout calculateLayout(String text) {
         start = i + 1;
         if(word.length() == 0) continue;
         
-        int16_t x1, y1; uint16_t w, h;
-        display.getTextBounds(word, 0, 0, &x1, &y1, &w, &h);
+        int w = 0;
+        if (useScriptU8) {
+          w = u8g2_gfx.getUTF8Width(word.c_str());
+        } else if (testFont != NULL) {
+          int16_t x1, y1; uint16_t tw, th;
+          display.getTextBounds(word, 0, 0, &x1, &y1, &tw, &th);
+          w = tw;
+        } else {
+          w = word.length() * 6;
+        }
+        
         if (w > maxWidth && !isSmallestFallback) { wordTooWide = true; break; } 
         
         String testLine = currentLine + (currentLine.length()>0 ? " " : "") + word;
-        display.getTextBounds(testLine, 0, 0, &x1, &y1, &w, &h);
+        if (useScriptU8) {
+          w = u8g2_gfx.getUTF8Width(testLine.c_str());
+        } else if (testFont != NULL) {
+          int16_t x1, y1; uint16_t tw, th;
+          display.getTextBounds(testLine, 0, 0, &x1, &y1, &tw, &th);
+          w = tw;
+        } else {
+          w = testLine.length() * 6;
+        }
         
         if (w > maxWidth && currentLine.length() > 0) {
           if (lineCount < 6) lines[lineCount++] = currentLine;
@@ -396,11 +433,36 @@ LyricLayout calculateLayout(String text) {
     
     int totalHeight = lineCount * testLineHeight;
     if (totalHeight <= 48 || isSmallestFallback) {
-      layout.font = testFont;
+      layout.isScriptU8g2 = useScriptU8;
+      layout.font = useScriptU8 ? NULL : testFont;
       layout.lineCount = lineCount;
       layout.lineHeight = testLineHeight;
-      for (int k=0; k<lineCount; k++) layout.lines[k] = lines[k];
-      layout.startY = 24 - (totalHeight / 2) + testLineHeight - (testFont == NULL ? 0 : 4);
+      
+      for (int k=0; k<lineCount; k++) {
+        layout.lines[k] = lines[k];
+        int lw = 0;
+        if (useScriptU8) {
+          lw = u8g2_gfx.getUTF8Width(lines[k].c_str());
+        } else if (testFont != NULL) {
+          int16_t x1, y1; uint16_t tw, th;
+          display.getTextBounds(lines[k], 0, 0, &x1, &y1, &tw, &th);
+          lw = tw;
+        } else {
+          lw = lines[k].length() * 6;
+        }
+        int lx = layout.startX + (availWidth - lw) / 2;
+        layout.lineStartX[k] = max(layout.startX, lx);
+      }
+      
+      // PERFECT VERTICAL CENTERING IN THE 48px BLUE WINDOW
+      int topY = max(0, (48 - totalHeight) / 2);
+      if (useScriptU8) {
+        layout.startY = topY + testLineHeight - 2;
+      } else if (testFont != NULL) {
+        layout.startY = topY + testLineHeight - 3;
+      } else {
+        layout.startY = topY;
+      }
       return layout;
     }
   }
@@ -430,11 +492,11 @@ int kineticAnimType = 0;
 struct Particle {
   String word;
   float x, y;
-  float vy;       // upward velocity
-  float vx;       // horizontal drift
-  int fontIndex;  // 0=24pt,1=18pt,2=12pt,3=9pt,4=null
-  int animStyle;  // 0=float, 1=drift-right, 2=fadepop, 3=bounce
-  int age;        // frames alive
+  float vy;
+  float vx;
+  int fontIndex;
+  int animStyle;
+  int age;
   float bounceOffset;
   bool alive;
 };
@@ -455,9 +517,8 @@ void initParticles() {
 
 void spawnParticle(String word) {
   const GFXfont** fonts = getActiveFonts();
-  int* heights = getActiveHeights();
   
-  int fIdx = random(1, 5); // 1=18pt, 2=12pt, 3=9pt, 4=null
+  int fIdx = random(0, 4);
   const GFXfont* font = fonts[fIdx];
 
   int16_t x1, y1; uint16_t ww, hh;
@@ -537,7 +598,7 @@ void drawParticles() {
     if (font == NULL) display.setTextSize(1);
 
     if (p.animStyle == 2 && p.age < 4) {
-      int scaledIdx = min(p.fontIndex + (3 - p.age), 4);
+      int scaledIdx = min(p.fontIndex + (3 - p.age), 3);
       display.setFont(fonts[scaledIdx]);
       if (fonts[scaledIdx] == NULL) display.setTextSize(1);
     }
@@ -588,7 +649,7 @@ void parseSerialData(String data) {
           int* heights = getActiveHeights();
           
           if (!currentLayout.isInternational) {
-            int rFont = random(1, 4); // 1=18pt, 2=12pt, 3=9pt
+            int rFont = random(0, 4);
             currentLayout.font = fonts[rFont];
             currentLayout.lineHeight = heights[rFont];
           }
@@ -687,8 +748,6 @@ void setup() {
 void drawCachedLyric(LyricLayout &layout, int ySlide) {
   if (layout.lineCount == 0) return;
   
-  int startX = layout.startX;
-  
   if (isKineticMode) {
     if (layout.isInternational) {
        u8g2_gfx.setFont(layout.u8g2_font);
@@ -703,10 +762,12 @@ void drawCachedLyric(LyricLayout &layout, int ySlide) {
     return;
   }
   
-  if (layout.isInternational) {
+  if (layout.isInternational || layout.isScriptU8g2) {
     u8g2_gfx.setFont(layout.u8g2_font);
     for(int i=0; i<layout.lineCount; i++) {
-      u8g2_gfx.setCursor(startX, layout.startY + (i * layout.lineHeight) - ySlide);
+      int lineX = layout.lineStartX[i];
+      int lineY = layout.startY + (i * layout.lineHeight) - ySlide;
+      u8g2_gfx.setCursor(lineX, lineY);
       u8g2_gfx.print(layout.lines[i]);
     }
   } else {
@@ -719,8 +780,9 @@ void drawCachedLyric(LyricLayout &layout, int ySlide) {
     
     int wordCount = 0;
     for(int i=0; i<layout.lineCount; i++) {
+      int lineX = layout.lineStartX[i];
       int lineY = layout.startY + (i * layout.lineHeight) - ySlide;
-      display.setCursor(startX, lineY);
+      display.setCursor(lineX, lineY);
       display.print(layout.lines[i]);
       
       // Highlight Logic for Sliding Mode
@@ -746,23 +808,17 @@ void drawCachedLyric(LyricLayout &layout, int ySlide) {
             int highlightX = 0;
             int highlightW = 0;
             
-            if (layout.isInternational) {
-                u8g2_gfx.setFont(layout.u8g2_font);
-                highlightX = (w == 0) ? 0 : u8g2_gfx.getUTF8Width(textBefore.c_str());
-                highlightW = u8g2_gfx.getUTF8Width(textWithWord.c_str()) - highlightX;
-            } else {
-                int16_t x1, y1; uint16_t w1, h1;
-                display.getTextBounds(textBefore, 0, lineY, &x1, &y1, &w1, &h1);
-                highlightX = (w == 0) ? 0 : w1;
-                
-                display.getTextBounds(textWithWord, 0, lineY, &x1, &y1, &w1, &h1);
-                highlightW = w1 - highlightX;
-            }
+            int16_t x1, y1; uint16_t w1, h1;
+            display.getTextBounds(textBefore, 0, lineY, &x1, &y1, &w1, &h1);
+            highlightX = (w == 0) ? 0 : w1;
             
-            int rectY = (layout.isInternational) ? lineY - 14 : ((layout.font == NULL) ? lineY - 1 : lineY - layout.lineHeight + 4);
-            int rectH = (layout.isInternational) ? 16 : ((layout.font == NULL) ? 9 : layout.lineHeight - 2);
+            display.getTextBounds(textWithWord, 0, lineY, &x1, &y1, &w1, &h1);
+            highlightW = w1 - highlightX;
             
-            display.fillRect(startX + highlightX - 2, rectY, highlightW + 4, rectH, SSD1306_INVERSE);
+            int rectY = (layout.font == NULL) ? lineY - 1 : lineY - layout.lineHeight + 4;
+            int rectH = (layout.font == NULL) ? 9 : layout.lineHeight - 2;
+            
+            display.fillRect(lineX + highlightX - 2, rectY, highlightW + 4, rectH, SSD1306_INVERSE);
           }
           wordCount++;
         }
@@ -840,10 +896,8 @@ void loop() {
   
   if (currentCompanion != COMPANION_NONE) {
     if (isIdle) {
-      // Draw Mascot Centered when idle
       drawCompanion(52, 10);
     } else {
-      // Draw Mascot on Left when lyrics are flowing
       drawCompanion(2, 10);
     }
   }
