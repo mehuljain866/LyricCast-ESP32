@@ -147,7 +147,7 @@ const GFXfont* getFontByChoice(int choice) {
   }
 }
 
-// 100% Full Text Immediate Centering (Never shifts or jumps between play and pause!)
+// 100% Full Text Immediate Centering (Always perfectly centered horizontally!)
 void drawProgressiveText(String text, int x, int y, int fontChoice, float progress) {
   if (text.length() == 0 || progress <= 0.0f) return;
   const GFXfont* f = getFontByChoice(fontChoice);
@@ -836,21 +836,30 @@ void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now
 }
 
 // ==========================================
-// SCENE GRAPH & PROCEDURAL STATE
+// SCENE GRAPH & KINETIC TRANSITIONS
 // ==========================================
 bool isSketchbookMode = true;
-String sketchMetaphor = "NORMAL";
-String sketchDoodle = "NONE";
-String sketchComposition = "CENTER";
-String sketchFocalWord = "";
-String sketchPrefix = "";
-String sketchSuffix = "";
-int sketchTilt = 0;
-bool sketchUnderline = false;
-uint32_t sketchDurationMs = 2500;
+
+struct SketchScene {
+  String metaphor = "NORMAL";
+  String doodle = "NONE";
+  String composition = "CENTER";
+  String focalWord = "";
+  String prefix = "";
+  String suffix = "";
+  int tilt = 0;
+  bool underline = false;
+  uint32_t durationMs = 2500;
+  int fontPreset = 0;
+  int fxFlags = 0;
+};
+
+SketchScene currentSketch;
+SketchScene oldSketch;
+
 unsigned long sketchSceneStartMs = 0;
-int sketchFontPreset = 0;
-int sketchFxFlags = 0;
+unsigned long sketchTransitionStartMs = 0;
+int sketchTransitionType = 0; // 0=SlideUp, 1=SlideDown, 2=PopZoom, 3=SmoothDrop
 
 // Dynamic Font Caching Structures
 struct LyricLayout {
@@ -1165,77 +1174,61 @@ void drawParticles() {
 }
 
 // ==========================================
-// PROCEDURAL SKETCHBOOK SCENE ENGINE (Strict 128x48 Pixel Geometry)
+// RENDER SINGLE SKETCH SCENE (Strict 128x48 Pixel Geometry with Offset)
 // ==========================================
-void drawSketchbookScene() {
-  unsigned long now = millis();
-  unsigned long elapsed = now - sketchSceneStartMs;
-  float rawProgress = (sketchDurationMs > 0) ? ((float)elapsed / sketchDurationMs) : 1.0f;
-  if (rawProgress > 1.0f) rawProgress = 1.0f;
-  
-  float enterT = min(1.0f, rawProgress * 3.5f);
-  float enterEased = easeOutBack(enterT);
-  
+void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, unsigned long now) {
+  if (s.focalWord.length() == 0 && s.prefix.length() == 0 && s.suffix.length() == 0) return;
+
   int minX = 2;
   int availWidth = 124;
-  
-  bool hasPrefix = (sketchPrefix.length() > 0);
-  bool hasFocal = (sketchFocalWord.length() > 0);
-  bool hasSuffix = (sketchSuffix.length() > 0);
 
-  // Safeguard: Never drop prefix/suffix in Monolith
-  if (sketchComposition == "MONOLITH" && (hasPrefix || hasSuffix)) {
-    sketchComposition = "CENTER";
-  }
+  bool hasPrefix = (s.prefix.length() > 0);
+  bool hasFocal = (s.focalWord.length() > 0);
+  bool hasSuffix = (s.suffix.length() > 0);
+  String comp = s.composition;
+  if (comp == "MONOLITH" && (hasPrefix || hasSuffix)) comp = "CENTER";
 
-  // Strict 128x48 Blue Zone Vertical Alignment (Ample spacing, zero overlap, zero clipping)
-  int prefixY = 10;
-  int focalY = 25;
-  int suffixY = 41;
+  // Strict 128x48 Blue Zone Vertical Alignment (Ample spacing, zero overlap)
+  int prefixY = 10 + yOffset;
+  int focalY = 25 + yOffset;
+  int suffixY = 41 + yOffset;
 
   if (hasPrefix && hasFocal && hasSuffix) {
-    prefixY = 10;
-    focalY = 25;
-    suffixY = 41;
+    prefixY = 10 + yOffset;
+    focalY = 25 + yOffset;
+    suffixY = 41 + yOffset;
   } else if (hasPrefix && hasFocal && !hasSuffix) {
-    prefixY = 12;
-    focalY = 36;
+    prefixY = 12 + yOffset;
+    focalY = 36 + yOffset;
   } else if (!hasPrefix && hasFocal && hasSuffix) {
-    focalY = 15;
-    suffixY = 39;
+    focalY = 15 + yOffset;
+    suffixY = 39 + yOffset;
   } else if (!hasPrefix && hasFocal && !hasSuffix) {
-    focalY = 28; // Perfectly centered vertically!
+    focalY = 28 + yOffset; // Perfectly centered vertically!
   }
-  
-  int focalXOffset = 0;
+
   float breathe = sin(now * 0.006f) * 1.0f;
-  
-  if (sketchMetaphor == "FALLING") {
-    focalY += (int)(-5 + easeOutBounce(enterT) * 5.0f);
-  } else if (sketchMetaphor == "FLYING") {
-    focalY += (int)(5 - easeOutQuad(enterT) * 5.0f);
+  if (s.metaphor == "FALLING") {
+    focalY += (int)(-5 + easeOutBounce(min(1.0f, progress * 3.5f)) * 5.0f);
+  } else if (s.metaphor == "FLYING") {
+    focalY += (int)(5 - easeOutQuad(min(1.0f, progress * 3.5f)) * 5.0f);
   } else {
     focalY += (int)breathe;
   }
-  
-  drawLivingCanvas();
 
-  if (sketchFxFlags & 2) {
-    drawCornerFrames(rawProgress);
+  if (s.fxFlags & 2) {
+    drawCornerFrames(progress);
   }
 
-  if (sketchFxFlags & 4) {
-    int barH = (int)(min(1.0f, rawProgress * 2.0f) * 34.0f);
-    display.fillRect(2, 4, 2, barH, SSD1306_WHITE);
+  if (s.fxFlags & 4) {
+    int barH = (int)(min(1.0f, progress * 2.0f) * 34.0f);
+    display.fillRect(2, 4 + yOffset, 2, barH, SSD1306_WHITE);
     minX = 7;
     availWidth = 119;
   }
 
-  // 16-Font Preset Pairings
-  int prefixFont = 3; 
-  int focalFont = 0;  
-  int suffixFont = 3; 
-
+  // Font Preset Selection
+  int prefixFont = 3, focalFont = 0, suffixFont = 3;
   if (currentFontStyle == FONT_SANS) {
     prefixFont = 4; focalFont = 1; suffixFont = 4;
   } else if (currentFontStyle == FONT_SERIF) {
@@ -1247,268 +1240,203 @@ void drawSketchbookScene() {
   } else if (currentFontStyle == FONT_HANDWRITTEN) {
     prefixFont = 3; focalFont = 0; suffixFont = 11;
   } else if (currentFontStyle == FONT_MIX) {
-    switch (sketchFontPreset % 8) {
-      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;  // Cursive Italic 9 + Cursive Bold 12 + Cursive 9
-      case 1: prefixFont = 6; focalFont = 1; suffixFont = 4; break;  // Sans Oblique 9 + Sans Bold 12 + Sans 9
-      case 2: prefixFont = 4; focalFont = 2; suffixFont = 3; break;  // Sans 9 + Editorial Serif 12 + Cursive 9
-      case 3: prefixFont = 9; focalFont = 14; suffixFont = 5; break; // Mono 9 + Mono Bold 12 + Mono Bold 9
-      case 4: prefixFont = 7; focalFont = 11; suffixFont = 6; break; // Sans Bold 9 + Cursive Italic 12 + Sans Oblique 9
-      case 5: prefixFont = 8; focalFont = 10; suffixFont = 8; break; // Serif Bold 9 + Sans Regular 12 + Serif Bold 9
-      case 6: prefixFont = 3; focalFont = 7; suffixFont = 5; break;  // Cursive 9 + Sans Bold 9 + Mono Bold 9
-      case 7: prefixFont = 5; focalFont = 0; suffixFont = 4; break;  // Mono Bold 9 + Cursive Bold 12 + Sans 9
+    switch (s.fontPreset % 8) {
+      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;
+      case 1: prefixFont = 6; focalFont = 1; suffixFont = 4; break;
+      case 2: prefixFont = 4; focalFont = 2; suffixFont = 3; break;
+      case 3: prefixFont = 9; focalFont = 14; suffixFont = 5; break;
+      case 4: prefixFont = 7; focalFont = 11; suffixFont = 6; break;
+      case 5: prefixFont = 8; focalFont = 10; suffixFont = 8; break;
+      case 6: prefixFont = 3; focalFont = 7; suffixFont = 5; break;
+      case 7: prefixFont = 5; focalFont = 0; suffixFont = 4; break;
     }
   }
 
-  // 1. MONOLITH COMPOSITION (Giant high-impact single word)
-  if (sketchComposition == "MONOLITH") {
+  // 1. MONOLITH COMPOSITION (Giant single word)
+  if (comp == "MONOLITH") {
     display.setFont(&FreeSansBold18pt7b);
     int16_t x1, y1; uint16_t fw, fh;
-    display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+    display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
     if (fw > availWidth) {
-      focalFont = 1; // Step down to 12pt
+      focalFont = 1;
       display.setFont(&FreeSansBold12pt7b);
-      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+      display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
       if (fw > availWidth) {
-        focalFont = 7; // Step down to 9pt
+        focalFont = 7;
         display.setFont(&FreeSansBold9pt7b);
-        display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+        display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
       }
     }
     int fx = minX + (availWidth - (int)fw) / 2;
     if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
     if (fx < minX) fx = minX;
-    int fy = 29 + (int)breathe;
-    drawProgressiveText(sketchFocalWord, fx, fy, focalFont, rawProgress);
-    if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, rawProgress);
-    if (sketchDoodle != "NONE" && fx + fw + 14 <= 126) {
-      drawDoodle(sketchDoodle, min(120, fx + fw + 8), fy - 6, rawProgress, now);
+    int fy = 29 + yOffset + (int)breathe;
+    if (fy >= -10 && fy <= 55) {
+      drawProgressiveText(s.focalWord, fx, fy, focalFont, progress);
+      if (s.underline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, progress);
+      if (s.doodle != "NONE" && fx + fw + 14 <= 126) {
+        drawDoodle(s.doodle, min(120, fx + fw + 8), fy - 6, progress, now);
+      }
     }
     return;
   }
 
-  // 2. DIAGONAL CASCADE COMPOSITION (3-Tier Cascade)
-  if (sketchComposition == "DIAGONAL") {
-    if (hasPrefix) {
-      const GFXfont* pFont = getFontByChoice(prefixFont);
-      display.setFont(pFont);
-      int16_t x1, y1; uint16_t pw, ph;
-      display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
-      if (pw > 70) { prefixFont = 4; pFont = getFontByChoice(4); display.setFont(pFont); display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph); }
-      if (pw > 70) { prefixFont = -1; pw = sketchPrefix.length() * 6; }
-      int px = minX + 2;
-      if (px + pw > 126) px = max(minX, 126 - (int)pw);
-      drawProgressiveText(sketchPrefix, px, prefixY, prefixFont, rawProgress);
-    }
-    if (hasFocal) {
-      const GFXfont* fFont = getFontByChoice(focalFont);
-      display.setFont(fFont);
-      int16_t x1, y1; uint16_t fw, fh;
-      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
-      if (fw > 76) {
-        focalFont = 7; // Sans Bold 9pt
-        display.setFont(&FreeSansBold9pt7b);
-        display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
-        if (fw > 76) { focalFont = -1; fw = sketchFocalWord.length() * 6; }
-      }
-      int fx = minX + (hasPrefix ? 24 : 8) + focalXOffset;
-      if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
-      if (fx < minX) fx = minX;
-      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
-      if (sketchUnderline) drawProgressiveUnderline(fx - 2, fx + fw + 2, focalY + 3, rawProgress);
-      if (sketchDoodle != "NONE" && fx + fw + 12 <= 126) {
-        drawDoodle(sketchDoodle, fx + fw + 7, focalY - 3, rawProgress, now);
-      }
-    }
-    if (hasSuffix) {
-      const GFXfont* sFont = getFontByChoice(suffixFont);
-      display.setFont(sFont);
-      int16_t x1, y1; uint16_t sw, sh;
-      display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
-      if (sw > 70) { suffixFont = 4; sFont = getFontByChoice(4); display.setFont(sFont); display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh); }
-      if (sw > 70) { suffixFont = -1; sw = sketchSuffix.length() * 6; }
-      int sx = max(minX, 126 - (int)sw);
-      drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
-    }
-    return;
-  }
-
-  // 3. SPLIT COMPOSITION
-  if (sketchComposition == "SPLIT") {
-    if (hasPrefix) {
-      const GFXfont* pFont = getFontByChoice(prefixFont);
-      display.setFont(pFont);
-      int16_t x1, y1; uint16_t pw, ph;
-      display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
-      if (pw > availWidth) { prefixFont = 4; pFont = getFontByChoice(4); display.setFont(pFont); display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph); }
-      if (pw > availWidth) { prefixFont = -1; pw = sketchPrefix.length() * 6; }
-      int px = minX + 2;
-      if (px + pw > 126) px = max(minX, 126 - (int)pw);
-      drawProgressiveText(sketchPrefix, px, prefixY, prefixFont, rawProgress);
-    }
-    if (hasFocal) {
-      const GFXfont* fFont = getFontByChoice(focalFont);
-      display.setFont(fFont);
-      int16_t x1, y1; uint16_t fw, fh;
-      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
-      if (fw > availWidth) {
-        focalFont = 3;
-        display.setFont(&FreeSerifItalic9pt7b);
-        display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
-        if (fw > availWidth) { focalFont = -1; fw = sketchFocalWord.length() * 6; }
-      }
-      int fx = minX + (availWidth - (int)fw) / 2 + focalXOffset;
-      if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
-      if (fx < minX) fx = minX;
-      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
-      if (sketchDoodle != "NONE" && fx + fw + 12 <= 126) {
-        drawDoodle(sketchDoodle, fx + fw + 7, focalY - 6, rawProgress, now);
-      }
-    }
-    if (hasSuffix) {
-      const GFXfont* sFont = getFontByChoice(suffixFont);
-      display.setFont(sFont);
-      int16_t x1, y1; uint16_t sw, sh;
-      display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
-      if (sw > availWidth) { suffixFont = 4; sFont = getFontByChoice(4); display.setFont(sFont); display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh); }
-      if (sw > availWidth) { suffixFont = -1; sw = sketchSuffix.length() * 6; }
-      int sx = max(minX, 126 - (int)sw);
-      drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
-    }
-    return;
-  }
-
-  // 4. STANDARD SKETCHBOOK / CENTER / STACKED / INVERSE / COMIC / DREAMY
-  if (hasPrefix) {
+  // 2. Draw Prefix
+  if (hasPrefix && prefixY >= -10 && prefixY <= 55) {
     const GFXfont* pFont = getFontByChoice(prefixFont);
     display.setFont(pFont);
     int16_t x1, y1; uint16_t pw, ph;
-    display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
-    
-    // Auto Step-Down Font if text is too wide (Zero Cutoff!)
+    display.getTextBounds(s.prefix, 0, 0, &x1, &y1, &pw, &ph);
     if (pw > availWidth) {
-      prefixFont = 4; // Sans 9pt
+      prefixFont = 4;
       pFont = getFontByChoice(prefixFont);
       display.setFont(pFont);
-      display.getTextBounds(sketchPrefix, 0, 0, &x1, &y1, &pw, &ph);
+      display.getTextBounds(s.prefix, 0, 0, &x1, &y1, &pw, &ph);
       if (pw > availWidth) {
-        prefixFont = -1; // 6x8 system font (fits 21 chars!)
+        prefixFont = -1;
         display.setFont(NULL);
-        pw = sketchPrefix.length() * 6;
+        pw = s.prefix.length() * 6;
       }
     }
-    
-    int px = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
+    int px = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
     if (px + pw > 126) px = max(minX, 126 - (int)pw);
     if (px < minX) px = minX;
-    drawProgressiveText(sketchPrefix, px, prefixY, prefixFont, rawProgress);
+    drawProgressiveText(s.prefix, px, prefixY, prefixFont, progress);
   }
-  
-  if (hasFocal) {
+
+  // 3. Draw Focal Word
+  if (hasFocal && focalY >= -10 && focalY <= 55) {
     const GFXfont* fFont = getFontByChoice(focalFont);
     display.setFont(fFont);
     int16_t x1, y1; uint16_t fw, fh;
-    display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
-    
+    display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
     if (fw > availWidth) {
       focalFont = (focalFont == 1 || focalFont == 10) ? 7 : 3;
       fFont = getFontByChoice(focalFont);
       display.setFont(fFont);
-      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+      display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
       if (fw > availWidth) {
         focalFont = -1;
         display.setFont(NULL);
-        fw = sketchFocalWord.length() * 6;
+        fw = s.focalWord.length() * 6;
       }
     }
-    
-    int fx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2 + focalXOffset;
+    int fx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2;
     if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
     if (fx < minX) fx = minX;
-    
-    // EXACT INVERSE BADGE MATH (Zero Clipping on 128x48!)
-    if (sketchFxFlags & 1) {
+
+    if (s.fxFlags & 1) {
       int16_t bx, by; uint16_t bw, bh;
-      if (focalFont >= 0) {
-        display.getTextBounds(sketchFocalWord, fx, focalY, &bx, &by, &bw, &bh);
-      } else {
-        bx = fx; by = focalY - 8; bw = fw; bh = 9;
-      }
+      if (focalFont >= 0) display.getTextBounds(s.focalWord, fx, focalY, &bx, &by, &bw, &bh);
+      else { bx = fx; by = focalY - 8; bw = fw; bh = 9; }
       int rx = max(0, bx - 3);
       int ry = max(0, by - 1);
       int rw = min(128 - rx, bw + 6);
       int rh = min(47 - ry, bh + 3);
       if (hasPrefix && ry < prefixY + 2) ry = prefixY + 2;
       if (hasSuffix && ry + rh > suffixY - 8) rh = max(6, (suffixY - 8) - ry);
-      display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
-      display.setTextColor(SSD1306_BLACK);
-      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
-      display.setTextColor(SSD1306_WHITE);
+      if (ry < 48 && ry + rh > 0) {
+        display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
+        display.setTextColor(SSD1306_BLACK);
+        drawProgressiveText(s.focalWord, fx, focalY, focalFont, progress);
+        display.setTextColor(SSD1306_WHITE);
+      }
     } else {
-      drawProgressiveText(sketchFocalWord, fx, focalY, focalFont, rawProgress);
+      drawProgressiveText(s.focalWord, fx, focalY, focalFont, progress);
     }
-    
-    // Hand-Drawn Wobbly Underline
-    if (sketchUnderline && !(sketchFxFlags & 1)) {
+
+    if (s.underline && !(s.fxFlags & 1)) {
       int ux1 = max(minX, fx - 2);
       int ux2 = min(126, fx + (int)fw + 2);
-      drawProgressiveUnderline(ux1, ux2, min(45, focalY + 3), rawProgress);
-    }
-    
-    // Hand-Drawn Circle Loop
-    if (sketchDoodle == "CIRCLE") {
-      drawProgressiveCircle(fx + fw/2, focalY - fh/2, min(24, (int)fw/2 + 4), min(12, (int)fh/2 + 3), rawProgress);
-    }
-    
-    // Hand-Drawn Box / Brackets
-    if (sketchDoodle == "BOX") {
-      int bx1 = max(minX, fx - 4);
-      int bx2 = min(126, fx + (int)fw + 4);
-      drawProgressiveBox(bx1, max(1, focalY - (int)fh - 1), bx2, min(45, focalY + 3), rawProgress);
+      drawProgressiveUnderline(ux1, ux2, min(45, focalY + 3), progress);
     }
 
-    // Hand-Drawn Thought Bubble
-    if (sketchDoodle == "BUBBLE") {
-      drawProgressiveBubble(fx + fw/2, focalY - fh/2, min(26, (int)fw/2 + 6), min(14, (int)fh/2 + 4), rawProgress);
-    }
-    
-    // Heartbeat ECG Wave
-    if (sketchDoodle == "WAVE") {
-      drawProgressiveWave(minX, minX + availWidth, 44, rawProgress, now);
-    }
-
-    // 50+ Procedural Semantic Doodles
-    if (sketchDoodle != "NONE" && sketchDoodle != "CIRCLE" && sketchDoodle != "BOX" && sketchDoodle != "BUBBLE" && sketchDoodle != "WAVE" && sketchDoodle != "UNDERLINE") {
+    if (s.doodle == "CIRCLE") {
+      drawProgressiveCircle(fx + fw/2, focalY - fh/2, min(24, (int)fw/2 + 4), min(12, (int)fh/2 + 3), progress);
+    } else if (s.doodle == "BOX") {
+      int bx1 = max(minX, fx - 4), bx2 = min(126, fx + (int)fw + 4);
+      drawProgressiveBox(bx1, max(1, focalY - (int)fh - 1), bx2, min(45, focalY + 3), progress);
+    } else if (s.doodle == "BUBBLE") {
+      drawProgressiveBubble(fx + fw/2, focalY - fh/2, min(26, (int)fw/2 + 6), min(14, (int)fh/2 + 4), progress);
+    } else if (s.doodle == "WAVE") {
+      drawProgressiveWave(minX, minX + availWidth, 44 + yOffset, progress, now);
+    } else if (s.doodle != "NONE" && s.doodle != "UNDERLINE") {
       int dx = fx + fw + 6;
-      int dy = focalY - 6;
-      if (dx + 12 > 126) {
-        dx = max(4, fx - 14); // Flip to left if right side is full!
-      }
-      drawDoodle(sketchDoodle, dx, dy, rawProgress, now);
+      int dy = focalY - 5;
+      if (dx + 12 > 126) dx = max(4, fx - 14);
+      drawDoodle(s.doodle, dx, dy, progress, now);
     }
   }
-  
-  if (hasSuffix) {
+
+  // 4. Draw Suffix
+  if (hasSuffix && suffixY >= -10 && suffixY <= 55) {
     const GFXfont* sFont = getFontByChoice(suffixFont);
     display.setFont(sFont);
     int16_t x1, y1; uint16_t sw, sh;
-    display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
-    
+    display.getTextBounds(s.suffix, 0, 0, &x1, &y1, &sw, &sh);
     if (sw > availWidth) {
-      suffixFont = 4; // Sans 9pt
+      suffixFont = 4;
       sFont = getFontByChoice(suffixFont);
       display.setFont(sFont);
-      display.getTextBounds(sketchSuffix, 0, 0, &x1, &y1, &sw, &sh);
+      display.getTextBounds(s.suffix, 0, 0, &x1, &y1, &sw, &sh);
       if (sw > availWidth) {
-        suffixFont = -1; // 6x8 system font
+        suffixFont = -1;
         display.setFont(NULL);
-        sw = sketchSuffix.length() * 6;
+        sw = s.suffix.length() * 6;
       }
     }
-    
-    int sx = (sketchComposition == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
+    int sx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
     if (sx + sw > 126) sx = max(minX, 126 - (int)sw);
     if (sx < minX) sx = minX;
-    drawProgressiveText(sketchSuffix, sx, suffixY, suffixFont, rawProgress);
+    drawProgressiveText(s.suffix, sx, suffixY, suffixFont, progress);
+  }
+}
+
+// ==========================================
+// ANIMATED SKETCHBOOK SCENE ENGINE (Smooth Multi-Style Line Transitions)
+// ==========================================
+void drawSketchbookScene() {
+  unsigned long now = millis();
+  unsigned long elapsed = now - sketchSceneStartMs;
+  float rawProgress = (currentSketch.durationMs > 0) ? ((float)elapsed / currentSketch.durationMs) : 1.0f;
+  if (rawProgress > 1.0f) rawProgress = 1.0f;
+
+  drawLivingCanvas();
+
+  unsigned long transElapsed = now - sketchTransitionStartMs;
+  const unsigned long TRANS_DURATION = 320; // 320ms smooth kinetic transition
+
+  if (transElapsed < TRANS_DURATION && oldSketch.focalWord.length() > 0) {
+    float transT = (float)transElapsed / (float)TRANS_DURATION;
+
+    if (sketchTransitionType == 0) {
+      // 1. Kinetic Slide Up Transition (Smooth page wipe up)
+      float easeT = easeInOutQuad(transT);
+      int yOut = (int)(-48.0f * easeT);
+      int yIn = (int)(48.0f * (1.0f - easeT));
+      drawSingleSketchScene(oldSketch, yOut, 1.0f, now);
+      drawSingleSketchScene(currentSketch, yIn, rawProgress, now);
+    } else if (sketchTransitionType == 1) {
+      // 2. Kinetic Slide Down Transition (Smooth page wipe down)
+      float easeT = easeInOutQuad(transT);
+      int yOut = (int)(48.0f * easeT);
+      int yIn = (int)(-48.0f * (1.0f - easeT));
+      drawSingleSketchScene(oldSketch, yOut, 1.0f, now);
+      drawSingleSketchScene(currentSketch, yIn, rawProgress, now);
+    } else if (sketchTransitionType == 2) {
+      // 3. Elastic Pop Up Transition
+      float easeT = easeOutBack(transT);
+      int yIn = (int)(20.0f * (1.0f - min(1.0f, easeT)));
+      drawSingleSketchScene(currentSketch, yIn, rawProgress, now);
+    } else {
+      // 4. Smooth Fade Drop Transition
+      float easeT = easeOutQuad(transT);
+      int yIn = (int)(-18.0f * (1.0f - easeT));
+      drawSingleSketchScene(currentSketch, yIn, rawProgress, now);
+    }
+  } else {
+    // Resting active scene
+    drawSingleSketchScene(currentSketch, 0, rawProgress, now);
   }
 }
 
@@ -1525,7 +1453,10 @@ void parseSerialData(String data) {
       if (newTitle != songTitle || newArtist != songArtist) {
         songTitle = newTitle;
         songArtist = newArtist;
-        marqueeX = 128; 
+        marqueeX = 128;
+        oldSketch.focalWord = "";
+        oldSketch.prefix = "";
+        oldSketch.suffix = "";
       }
       progressMs = data.substring(split2 + 1, split3).toFloat();
       durationMs = data.substring(split3 + 1).toFloat();
@@ -1563,30 +1494,38 @@ void parseSerialData(String data) {
     int p10 = (p9 > 0) ? data.indexOf('|', p9 + 1) : -1;
     
     if (p1 > 0 && p2 > 0 && p3 > 0 && p4 > 0 && p5 > 0 && p6 > 0 && p7 > 0 && p8 > 0) {
-      sketchMetaphor = data.substring(2, p1);
-      sketchDoodle = data.substring(p1 + 1, p2);
-      sketchComposition = data.substring(p2 + 1, p3);
-      sketchFocalWord = data.substring(p3 + 1, p4);
-      sketchPrefix = data.substring(p4 + 1, p5);
-      sketchSuffix = data.substring(p5 + 1, p6);
-      sketchTilt = data.substring(p6 + 1, p7).toInt();
-      sketchUnderline = (data.substring(p7 + 1, p8).toInt() == 1);
+      SketchScene newScene;
+      newScene.metaphor = data.substring(2, p1);
+      newScene.doodle = data.substring(p1 + 1, p2);
+      newScene.composition = data.substring(p2 + 1, p3);
+      newScene.focalWord = data.substring(p3 + 1, p4);
+      newScene.prefix = data.substring(p4 + 1, p5);
+      newScene.suffix = data.substring(p5 + 1, p6);
+      newScene.tilt = data.substring(p6 + 1, p7).toInt();
+      newScene.underline = (data.substring(p7 + 1, p8).toInt() == 1);
       
       if (p9 > 0) {
-        sketchDurationMs = data.substring(p8 + 1, p9).toInt();
+        newScene.durationMs = data.substring(p8 + 1, p9).toInt();
         if (p10 > 0) {
-          sketchFontPreset = data.substring(p9 + 1, p10).toInt();
-          sketchFxFlags = data.substring(p10 + 1).toInt();
+          newScene.fontPreset = data.substring(p9 + 1, p10).toInt();
+          newScene.fxFlags = data.substring(p10 + 1).toInt();
         } else {
-          sketchFontPreset = data.substring(p9 + 1).toInt();
-          sketchFxFlags = 0;
+          newScene.fontPreset = data.substring(p9 + 1).toInt();
+          newScene.fxFlags = 0;
         }
       } else {
-        sketchDurationMs = data.substring(p8 + 1).toInt();
-        sketchFontPreset = 0;
-        sketchFxFlags = 0;
+        newScene.durationMs = data.substring(p8 + 1).toInt();
+        newScene.fontPreset = 0;
+        newScene.fxFlags = 0;
       }
-      sketchSceneStartMs = millis();
+      
+      if (newScene.focalWord != currentSketch.focalWord || newScene.prefix != currentSketch.prefix || newScene.suffix != currentSketch.suffix) {
+        oldSketch = currentSketch;
+        currentSketch = newScene;
+        sketchSceneStartMs = millis();
+        sketchTransitionStartMs = millis();
+        sketchTransitionType = random(0, 4); // Randomized kinetic transitions!
+      }
     }
   }
   else if (data.startsWith("L|")) {
