@@ -257,10 +257,10 @@ class LyricDirector:
             # Line length balancing (gentle guidance so extreme lines don't overflow)
             prefix_cand = " ".join(words[:idx])
             suffix_cand = " ".join(words[idx + 1:])
-            if len(prefix_cand) > 22:
-                score -= (len(prefix_cand) - 22) * 1.5
-            if len(suffix_cand) > 22:
-                score -= (len(suffix_cand) - 22) * 1.5
+            if len(prefix_cand) > 18:
+                score -= (len(prefix_cand) - 18) * 3.0
+            if len(suffix_cand) > 18:
+                score -= (len(suffix_cand) - 18) * 3.0
             
             # Subtle position centering preference (+4)
             center_ratio = 1.0 - (abs(idx - (len(words) - 1) / 2.0) / max(1, (len(words) - 1) / 2.0))

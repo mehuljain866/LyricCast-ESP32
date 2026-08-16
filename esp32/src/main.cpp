@@ -1293,45 +1293,29 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     return;
   }
 
-  // 2. Draw Prefix
+  // 2. Draw Prefix (Always locked in harmonious single font family)
   if (hasPrefix && prefixY >= -10 && prefixY <= 55) {
     const GFXfont* pFont = getFontByChoice(prefixFont);
     display.setFont(pFont);
     int16_t x1, y1; uint16_t pw, ph;
     display.getTextBounds(s.prefix, 0, 0, &x1, &y1, &pw, &ph);
-    if (pw > availWidth) {
-      prefixFont = 4;
-      pFont = getFontByChoice(prefixFont);
-      display.setFont(pFont);
-      display.getTextBounds(s.prefix, 0, 0, &x1, &y1, &pw, &ph);
-      if (pw > availWidth) {
-        prefixFont = -1;
-        display.setFont(NULL);
-        pw = s.prefix.length() * 6;
-      }
-    }
     int px = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
     if (px + pw > 126) px = max(minX, 126 - (int)pw);
     if (px < minX) px = minX;
     drawProgressiveText(s.prefix, px, prefixY, prefixFont, progress);
   }
 
-  // 3. Draw Focal Word
+  // 3. Draw Focal Word (Always locked in harmonious single font family)
   if (hasFocal && focalY >= -10 && focalY <= 55) {
     const GFXfont* fFont = getFontByChoice(focalFont);
     display.setFont(fFont);
     int16_t x1, y1; uint16_t fw, fh;
     display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
     if (fw > availWidth) {
-      focalFont = (focalFont == 1 || focalFont == 10) ? 7 : 3;
+      focalFont = prefixFont; // Harmonious 9pt of the SAME family
       fFont = getFontByChoice(focalFont);
       display.setFont(fFont);
       display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
-      if (fw > availWidth) {
-        focalFont = -1;
-        display.setFont(NULL);
-        fw = s.focalWord.length() * 6;
-      }
     }
     int fx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2;
     if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
@@ -1380,23 +1364,12 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     }
   }
 
-  // 4. Draw Suffix
+  // 4. Draw Suffix (Always locked in harmonious single font family)
   if (hasSuffix && suffixY >= -10 && suffixY <= 55) {
     const GFXfont* sFont = getFontByChoice(suffixFont);
     display.setFont(sFont);
     int16_t x1, y1; uint16_t sw, sh;
     display.getTextBounds(s.suffix, 0, 0, &x1, &y1, &sw, &sh);
-    if (sw > availWidth) {
-      suffixFont = 4;
-      sFont = getFontByChoice(suffixFont);
-      display.setFont(sFont);
-      display.getTextBounds(s.suffix, 0, 0, &x1, &y1, &sw, &sh);
-      if (sw > availWidth) {
-        suffixFont = -1;
-        display.setFont(NULL);
-        sw = s.suffix.length() * 6;
-      }
-    }
     int sx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
     if (sx + sw > 126) sx = max(minX, 126 - (int)sw);
     if (sx < minX) sx = minX;

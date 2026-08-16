@@ -228,8 +228,16 @@ async def main():
                     ser.write(f"L|Fetching lyrics...|\n".encode('utf-8', 'replace'))
                     
                     try:
-                        lrc = syncedlyrics.search(f"{title} {artist}")
+                        loop = asyncio.get_running_loop()
+                        lrc = await loop.run_in_executor(None, syncedlyrics.search, f"{title} {artist}")
                         lyrics = parse_lrc(lrc)
+                        # Immediately re-query real-time playback position from Windows Media Manager:
+                        _, _, fresh_pos_ms, _, is_playing = await get_media_info()
+                        if fresh_pos_ms > 0:
+                            api_pos_ms = fresh_pos_ms
+                            last_api_pos_ms = fresh_pos_ms
+                            local_sync_time = time.time()
+                            pos_ms = fresh_pos_ms
                         if not lyrics:
                             ser.write(f"L|No synced lyrics found|\n".encode('utf-8', 'replace'))
                     except Exception as e:
