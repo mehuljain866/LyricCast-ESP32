@@ -9,6 +9,8 @@
 #include <Fonts/FreeSans18pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
 #include <Fonts/FreeSans9pt7b.h>
+#include <Fonts/FreeSansBold12pt7b.h>
+#include <Fonts/FreeSansBold9pt7b.h>
 
 // Handwritten / Aesthetic Script Fonts
 #include <Fonts/FreeSerifBoldItalic18pt7b.h>
@@ -257,12 +259,67 @@ void drawCompanion(int x, int y) {
   }
 }
 
+// ==========================================
+// VECTOR DOODLE PRIMITIVES (ESP32)
+// ==========================================
+void drawMiniHeart(int cx, int cy) {
+  display.drawPixel(cx-2, cy-2, SSD1306_WHITE);
+  display.drawPixel(cx-1, cy-3, SSD1306_WHITE);
+  display.drawPixel(cx, cy-2, SSD1306_WHITE);
+  display.drawPixel(cx+1, cy-3, SSD1306_WHITE);
+  display.drawPixel(cx+2, cy-2, SSD1306_WHITE);
+  display.drawLine(cx-2, cy-1, cx+2, cy-1, SSD1306_WHITE);
+  display.drawLine(cx-1, cy, cx+1, cy, SSD1306_WHITE);
+  display.drawPixel(cx, cy+1, SSD1306_WHITE);
+}
+
+void drawMiniStar(int cx, int cy) {
+  display.drawLine(cx-3, cy, cx+3, cy, SSD1306_WHITE);
+  display.drawLine(cx, cy-3, cx, cy+3, SSD1306_WHITE);
+  display.drawPixel(cx-1, cy-1, SSD1306_WHITE);
+  display.drawPixel(cx+1, cy+1, SSD1306_WHITE);
+  display.drawPixel(cx-1, cy+1, SSD1306_WHITE);
+  display.drawPixel(cx+1, cy-1, SSD1306_WHITE);
+}
+
+void drawMiniArrow(int x1, int y1, int x2, int y2) {
+  display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+  display.drawLine(x2, y2, x2-3, y2-2, SSD1306_WHITE);
+  display.drawLine(x2, y2, x2-3, y2+2, SSD1306_WHITE);
+}
+
+void drawWobblyUnderline(int x1, int x2, int y) {
+  int curX = x1;
+  int step = max(4, (x2 - x1) / 4);
+  int curY = y;
+  while (curX < x2) {
+    int nextX = min(x2, curX + step);
+    int nextY = y + ((curX / step) % 2 == 0 ? 1 : -1);
+    display.drawLine(curX, curY, nextX, nextY, SSD1306_WHITE);
+    curX = nextX;
+    curY = nextY;
+  }
+}
+
+// ==========================================
+// SKETCHBOOK DIRECTOR STATE
+// ==========================================
+bool isSketchbookMode = true;
+String sketchMetaphor = "NORMAL";
+String sketchDoodle = "NONE";
+String sketchFocalWord = "";
+String sketchPrefix = "";
+String sketchSuffix = "";
+int sketchTilt = 0;
+bool sketchUnderline = false;
+unsigned long sketchSceneStartMs = 0;
+
 // Dynamic Font Caching Structures
 struct LyricLayout {
   bool isInternational;
   bool isScriptU8g2;
-  const GFXfont* font;         // For GFX English
-  const uint8_t* u8g2_font;    // For U8g2 (International or Compact Script)
+  const GFXfont* font;         
+  const uint8_t* u8g2_font;    
   int lineCount;
   String lines[6];
   int lineStartX[6];
@@ -368,7 +425,6 @@ LyricLayout calculateLayout(String text) {
     const GFXfont* testFont = fonts[f];
     int testLineHeight = heights[f];
     
-    // In Handwritten mode, use Victorian Cursive Script instead of ugly 5x7 basic font!
     bool useScriptU8 = (currentFontStyle == FONT_HANDWRITTEN && isSmallestFallback);
     
     if (useScriptU8) {
@@ -454,7 +510,6 @@ LyricLayout calculateLayout(String text) {
         layout.lineStartX[k] = max(layout.startX, lx);
       }
       
-      // PERFECT VERTICAL CENTERING IN THE 48px BLUE WINDOW
       int topY = max(0, (48 - totalHeight) / 2);
       if (useScriptU8) {
         layout.startY = topY + testLineHeight - 2;
@@ -476,7 +531,7 @@ bool isKineticV2Mode = false;
 int highlightWordIndex = 0;
 
 // ============================
-// KINETIC V1 STATE
+// KINETIC V1 & V2 PARTICLES
 // ============================
 int kineticTargetX = 0;
 int kineticTargetY = 0;
@@ -484,11 +539,7 @@ int kineticCurrentX = 0;
 int kineticCurrentY = 0;
 int kineticAnimType = 0;
 
-// ============================
-// KOTODAMA V2 PARTICLE ENGINE
-// ============================
 #define MAX_PARTICLES 6
-
 struct Particle {
   String word;
   float x, y;
@@ -517,7 +568,6 @@ void initParticles() {
 
 void spawnParticle(String word) {
   const GFXfont** fonts = getActiveFonts();
-  
   int fIdx = random(0, 4);
   const GFXfont* font = fonts[fIdx];
 
@@ -538,7 +588,6 @@ void spawnParticle(String word) {
   if (spawnDiagX > (minX + 60)) { spawnDiagX = minX; spawnDiagY = 44; }
 
   int style = random(0, 4);
-
   int slot = -1;
   for (int i = 0; i < MAX_PARTICLES; i++) {
     if (!particles[i].alive) { slot = i; break; }
@@ -608,6 +657,82 @@ void drawParticles() {
   }
 }
 
+// ==========================================
+// SKETCHBOOK SCENE RENDERER (ESP32)
+// ==========================================
+void drawSketchbookScene() {
+  int minX = (currentCompanion != COMPANION_NONE) ? 28 : 2;
+  int availWidth = 128 - minX;
+  
+  unsigned long ageMs = millis() - sketchSceneStartMs;
+  float tSec = (float)ageMs / 1000.0;
+  
+  // Physics offset for focal word
+  int focalY = 27;
+  int focalXOffset = 0;
+  
+  if (sketchMetaphor == "FALLING") {
+    if (ageMs < 400) {
+      focalY = -15 + (ageMs * 42) / 400;
+    }
+  } else if (sketchMetaphor == "FLYING") {
+    focalY = 27 - (int)(sin(tSec * 4.0) * 3.0);
+  } else if (sketchMetaphor == "SPINNING" || sketchMetaphor == "SHAKE" || sketchMetaphor == "SCREAM") {
+    focalXOffset = (int)(sin(tSec * 18.0) * 2.5);
+  }
+  
+  // 1. Draw Prefix (Top)
+  if (sketchPrefix.length() > 0) {
+    u8g2_gfx.setFont(u8g2_font_victoriabold8_8u);
+    int pw = u8g2_gfx.getUTF8Width(sketchPrefix.c_str());
+    int px = minX + (availWidth - pw) / 2;
+    u8g2_gfx.setCursor(max(minX, px), 10);
+    u8g2_gfx.print(sketchPrefix);
+  }
+  
+  // 2. Draw Focal Word (MASSIVE in Middle)
+  if (sketchFocalWord.length() > 0) {
+    display.setFont(&FreeSansBold12pt7b);
+    int16_t x1, y1; uint16_t fw, fh;
+    display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+    
+    // Auto-scale down if focal word exceeds available width
+    if (fw > availWidth) {
+      display.setFont(&FreeSansBold9pt7b);
+      display.getTextBounds(sketchFocalWord, 0, 0, &x1, &y1, &fw, &fh);
+    }
+    
+    int fx = minX + (availWidth - (int)fw) / 2 + focalXOffset;
+    if (fx < minX) fx = minX;
+    
+    display.setCursor(fx, focalY);
+    display.print(sketchFocalWord);
+    
+    // Hand-drawn Underline
+    if (sketchUnderline) {
+      drawWobblyUnderline(fx - 2, fx + fw + 2, focalY + 3);
+    }
+    
+    // Draw Doodles
+    if (sketchDoodle == "HEART") {
+      drawMiniHeart(fx + fw + 6, focalY - 8);
+    } else if (sketchDoodle == "STAR") {
+      drawMiniStar(fx - 8, focalY - 10);
+    } else if (sketchDoodle == "ARROW") {
+      drawMiniArrow(minX + 2, focalY - 12, fx - 4, focalY - 4);
+    }
+  }
+  
+  // 3. Draw Suffix (Bottom)
+  if (sketchSuffix.length() > 0) {
+    u8g2_gfx.setFont(u8g2_font_victoriabold8_8u);
+    int sw = u8g2_gfx.getUTF8Width(sketchSuffix.c_str());
+    int sx = minX + (availWidth - sw) / 2;
+    u8g2_gfx.setCursor(max(minX, sx), 42);
+    u8g2_gfx.print(sketchSuffix);
+  }
+}
+
 void parseSerialData(String data) {
   data.trim();
   if (data.startsWith("M|")) {
@@ -628,6 +753,26 @@ void parseSerialData(String data) {
       lastUpdateMs = millis();
     }
   } 
+  else if (data.startsWith("K|")) {
+    // Protocol: K|<metaphor>|<doodle>|<focal>|<prefix>|<suffix>|<tilt>|<underline>
+    int p1 = data.indexOf('|', 2);
+    int p2 = data.indexOf('|', p1 + 1);
+    int p3 = data.indexOf('|', p2 + 1);
+    int p4 = data.indexOf('|', p3 + 1);
+    int p5 = data.indexOf('|', p4 + 1);
+    int p6 = data.indexOf('|', p5 + 1);
+    
+    if (p1 > 0 && p2 > 0 && p3 > 0 && p4 > 0 && p5 > 0 && p6 > 0) {
+      sketchMetaphor = data.substring(2, p1);
+      sketchDoodle = data.substring(p1 + 1, p2);
+      sketchFocalWord = data.substring(p2 + 1, p3);
+      sketchPrefix = data.substring(p3 + 1, p4);
+      sketchSuffix = data.substring(p4 + 1, p5);
+      sketchTilt = data.substring(p5 + 1, p6).toInt();
+      sketchUnderline = (data.substring(p6 + 1).toInt() == 1);
+      sketchSceneStartMs = millis();
+    }
+  }
   else if (data.startsWith("L|")) {
     int split = data.indexOf('|', 2);
     if (split > 0) {
@@ -675,7 +820,7 @@ void parseSerialData(String data) {
           else if (kineticAnimType == 1) { kineticCurrentX = 128; kineticCurrentY = kineticTargetY; }
           else { kineticCurrentX = kineticTargetX; kineticCurrentY = kineticTargetY; }
         }
-        else if (isGiantMode) {
+        else if (isGiantMode || isSketchbookMode) {
           animating = false;
         } else {
           animating = true;
@@ -686,6 +831,7 @@ void parseSerialData(String data) {
   }
   else if (data.startsWith("S|")) {
     bool wasV2 = isKineticV2Mode;
+    isSketchbookMode = (data.indexOf("SKETCHBOOK") > 0);
     isGiantMode = (data.indexOf("GIANT") > 0);
     isSlidingMode = (data.indexOf("SLIDING") > 0);
     isKineticMode = (data.indexOf("KINETIC2") < 0 && data.indexOf("KINETIC") > 0);
@@ -903,7 +1049,9 @@ void loop() {
   }
 
   if (!isIdle) {
-    if (isKineticV2Mode) {
+    if (isSketchbookMode) {
+      drawSketchbookScene();
+    } else if (isKineticV2Mode) {
       drawParticles();
     } else if (animating) {
       drawCachedLyric(oldLayout, animOffset);

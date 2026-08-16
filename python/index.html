@@ -395,9 +395,19 @@
 <body>
 
 <div class="container">
-    <div class="header">
-        <div id="live-logo" style="font-size: 3rem; margin-bottom: 0.5rem; color: var(--accent-color); text-shadow: 2px 2px 4px var(--shadow-dark), -2px -2px 4px var(--shadow-light);">♫</div>
-        <h1>Music Device Settings</h1>
+    <!-- Live HD Sketchbook Canvas Card -->
+    <div class="card active" style="margin-bottom: 2rem; padding: 1.5rem; text-align: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 class="card-title" style="margin: 0; font-size: 1.2rem;">📓 Live Sketchbook Canvas (Director ✨)</h2>
+            <div id="director-badge" style="font-size: 0.8rem; background: rgba(79, 209, 197, 0.15); color: #319795; padding: 4px 10px; border-radius: 12px; font-weight: 600;">🎬 Auto-Director Active</div>
+        </div>
+        <div style="position: relative; width: 100%; height: 200px; background: #fffdfa; border-radius: 16px; box-shadow: inset 4px 4px 10px var(--shadow-dark), inset -4px -4px 10px var(--shadow-light); border: 2px dashed #e2d9cc; overflow: hidden;">
+            <canvas id="sketchbook-canvas" width="400" height="200" style="width: 100%; height: 100%;"></canvas>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; font-size: 0.85rem; color: #718096;">
+            <span id="canvas-track-title">🎵 Waiting for Spotify</span>
+            <span id="canvas-metaphor-info">Metaphor: Idle</span>
+        </div>
     </div>
 
     <!-- Tabs Navigation -->
@@ -428,6 +438,7 @@
         <div class="form-group">
             <label>Caption Mode</label>
             <select id="caption-mode-select">
+                <option value="sketchbook" selected>📓 Automated Hand-Drawn Sketchbook (Director Mode ✨)</option>
                 <option value="normal">Normal (Sentence by Sentence)</option>
                 <option value="sliding">Sliding Rectangle Box (Karaoke)</option>
                 <option value="giant">Giant Word-for-Word</option>
@@ -663,6 +674,209 @@
             }
         });
     });
+    // ==========================================
+    // LIVE HD SKETCHBOOK CANVAS ANIMATION ENGINE
+    // ==========================================
+    const canvas = document.getElementById('sketchbook-canvas');
+    const ctx = canvas.getContext('2d');
+    let currentSceneData = {
+        type: 'idle',
+        raw_text: 'Waiting for Spotify',
+        prefix: '',
+        focal_word: 'Spotify',
+        suffix: '',
+        metaphor: 'idle',
+        doodle: 'none',
+        tilt_angle: 0,
+        has_underline: false
+    };
+
+    let animTime = 0;
+    let sceneAge = 0;
+    let lastSceneText = "";
+
+    async function pollScene() {
+        try {
+            const res = await fetch('/api/current_scene');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.raw_text !== lastSceneText) {
+                    lastSceneText = data.raw_text;
+                    sceneAge = 0;
+                }
+                currentSceneData = data;
+                document.getElementById('canvas-track-title').textContent = `🎵 ${data.title || 'Waiting for Spotify'}`;
+                document.getElementById('canvas-metaphor-info').textContent = `Metaphor: ${data.metaphor || 'Normal'} | Doodle: ${data.doodle || 'None'}`;
+            }
+        } catch (e) {
+            // offline fallback
+        }
+        setTimeout(pollScene, 120);
+    }
+    pollScene();
+
+    function drawSketchbook() {
+        animTime += 0.03;
+        sceneAge += 0.03;
+
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // 1. Draw Paper Background & Faint Notebook Lines
+        ctx.fillStyle = '#fffdfa';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = 'rgba(226, 217, 204, 0.5)';
+        ctx.lineWidth = 1;
+        for (let y = 30; y < h; y += 28) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+
+        // 2. Physics & Motion Offsets
+        let offsetY = 0;
+        let rotation = (currentSceneData.tilt_angle || 0) * Math.PI / 180;
+        let scalePunch = 1.0;
+
+        const metaphor = (currentSceneData.metaphor || 'normal').toLowerCase();
+        if (metaphor === 'falling') {
+            if (sceneAge < 0.6) {
+                offsetY = -80 + (sceneAge / 0.6) * 80 + Math.sin(sceneAge * 15) * 4;
+            }
+        } else if (metaphor === 'flying') {
+            offsetY = -Math.sin(animTime * 2) * 6;
+        } else if (metaphor === 'spinning' || metaphor === 'shake') {
+            rotation += Math.sin(animTime * 8) * 0.08;
+        } else if (metaphor === 'scream') {
+            offsetY = (Math.random() - 0.5) * 4;
+            scalePunch = 1.05 + Math.sin(animTime * 12) * 0.05;
+        }
+
+        ctx.save();
+        ctx.translate(w / 2, h / 2 + offsetY);
+        ctx.rotate(rotation);
+        ctx.scale(scalePunch, scalePunch);
+
+        const raw = currentSceneData.raw_text || '';
+        const isIdle = raw === '...' || raw === '♫' || raw === '♥' || raw === '★' || raw === '☺' || raw === 'Waiting for Spotify';
+
+        if (isIdle) {
+            ctx.font = 'italic 28px "Georgia", serif';
+            ctx.fillStyle = '#a0aec0';
+            ctx.textAlign = 'center';
+            ctx.fillText(raw === '...' ? '♫ Listening...' : raw, 0, 10);
+        } else {
+            const prefix = currentSceneData.prefix || '';
+            const focal = currentSceneData.focal_word || '';
+            const suffix = currentSceneData.suffix || '';
+
+            // Draw Prefix (Upper / Small)
+            if (prefix) {
+                ctx.font = 'italic 15px "Georgia", serif';
+                ctx.fillStyle = '#4a5568';
+                ctx.textAlign = 'center';
+                ctx.fillText(prefix, 0, -32);
+            }
+
+            // Draw Focal Word (MASSIVE & BOLD)
+            ctx.font = 'bold 36px "Courier New", monospace';
+            ctx.fillStyle = '#1a202c';
+            ctx.textAlign = 'center';
+            const focalWidth = ctx.measureText(focal).width;
+            ctx.fillText(focal, 0, 5);
+
+            // Draw Hand-drawn Underline
+            if (currentSceneData.has_underline && focal) {
+                ctx.strokeStyle = '#e53e3e';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                const ux1 = -focalWidth / 2 - 4;
+                const ux2 = focalWidth / 2 + 4;
+                const uy = 14;
+                ctx.moveTo(ux1, uy);
+                for (let x = ux1; x <= ux2; x += 10) {
+                    ctx.lineTo(x, uy + Math.sin(x * 0.3 + animTime * 3) * 1.8);
+                }
+                ctx.stroke();
+            }
+
+            // Draw Suffix (Lower / Cursive)
+            if (suffix) {
+                ctx.font = 'italic 16px "Georgia", serif';
+                ctx.fillStyle = '#4a5568';
+                ctx.textAlign = 'center';
+                ctx.fillText(suffix, 0, 42);
+            }
+
+            // Draw Hand-Drawn Doodles
+            const doodle = (currentSceneData.doodle || 'none').toLowerCase();
+            if (doodle === 'heart') {
+                ctx.fillStyle = '#e53e3e';
+                ctx.strokeStyle = '#c53030';
+                ctx.lineWidth = 1.5;
+                const pulse = 1.0 + Math.sin(animTime * 6) * 0.15;
+                drawHeartPath(ctx, focalWidth / 2 + 25, -10, 10 * pulse);
+            } else if (doodle === 'star') {
+                ctx.fillStyle = '#d69e2e';
+                ctx.strokeStyle = '#b7791f';
+                ctx.lineWidth = 1.5;
+                drawStarPath(ctx, -focalWidth / 2 - 25, -15, 9, 4, animTime * 3);
+            } else if (doodle === 'arrow') {
+                ctx.strokeStyle = '#3182ce';
+                ctx.lineWidth = 2;
+                drawArrowPath(ctx, -focalWidth / 2 - 35, -20, -focalWidth / 2 - 6, 0);
+            }
+        }
+
+        ctx.restore();
+        requestAnimationFrame(drawSketchbook);
+    }
+
+    function drawHeartPath(c, cx, cy, r) {
+        c.beginPath();
+        for (let i = 0; i <= 16; i++) {
+            const t = (i / 16) * Math.PI * 2;
+            const x = cx + (16 * Math.pow(Math.sin(t), 3) / 16) * r;
+            const y = cy - ((13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) / 16) * r;
+            if (i === 0) c.moveTo(x, y);
+            else c.lineTo(x, y);
+        }
+        c.fill();
+        c.stroke();
+    }
+
+    function drawStarPath(c, cx, cy, outerR, innerR, rot) {
+        c.beginPath();
+        for (let i = 0; i < 10; i++) {
+            const r = (i % 2 === 0) ? outerR : innerR;
+            const angle = (i * Math.PI / 5) + rot;
+            const x = cx + Math.cos(angle) * r;
+            const y = cy + Math.sin(angle) * r;
+            if (i === 0) c.moveTo(x, y);
+            else c.lineTo(x, y);
+        }
+        c.closePath();
+        c.fill();
+        c.stroke();
+    }
+
+    function drawArrowPath(c, x1, y1, x2, y2) {
+        c.beginPath();
+        c.moveTo(x1, y1);
+        c.quadraticCurveTo((x1 + x2) / 2, y1 - 10, x2, y2);
+        c.stroke();
+        
+        const angle = Math.atan2(y2 - (y1 - 10), x2 - ((x1 + x2) / 2));
+        c.beginPath();
+        c.moveTo(x2 - 8 * Math.cos(angle - 0.4), y2 - 8 * Math.sin(angle - 0.4));
+        c.lineTo(x2, y2);
+        c.lineTo(x2 - 8 * Math.cos(angle + 0.4), y2 - 8 * Math.sin(angle + 0.4));
+        c.stroke();
+    }
+
+    requestAnimationFrame(drawSketchbook);
 </script>
 
 </body>

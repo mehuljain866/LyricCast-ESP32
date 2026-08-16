@@ -11,8 +11,34 @@ import json
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from winsdk.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as MediaManager
 
+from director import LyricDirector
+from sketchbook_engine import SketchbookEngine
+
+SYNC_OFFSET_SECONDS = 0.20
+
+director = LyricDirector()
+sketchbook = SketchbookEngine()
+
 CURRENT_SETTINGS = {
-    'captionMode': 'normal'
+    'captionMode': 'sketchbook',
+    'font': 'handwritten',
+    'companion': 'cat',
+    'logo': 'music',
+    'uiScale': '100'
+}
+
+CURRENT_SCENE = {
+    "type": "idle",
+    "raw_text": "...",
+    "prefix": "",
+    "focal_word": "",
+    "suffix": "",
+    "metaphor": "idle",
+    "doodle": "none",
+    "tilt_angle": 0,
+    "has_underline": False,
+    "title": "Waiting for Spotify",
+    "artist": ""
 }
 
 def find_esp32_port():
@@ -32,7 +58,6 @@ async def get_media_info():
         if info and timeline and playback:
             pos_ms = timeline.position.total_seconds() * 1000
             dur_ms = timeline.end_time.total_seconds() * 1000
-            # 4 is Playing in Windows Media API
             is_playing = (playback.playback_status == 4) 
             return info.title, info.artist, pos_ms, dur_ms, is_playing
     return None, None, 0, 1000, False
@@ -55,19 +80,17 @@ def parse_lrc(lrc_text):
                 pass
     return sorted(lyrics, key=lambda x: x['time'])
 
-import threading
-from http.server import SimpleHTTPRequestHandler, HTTPServer
-import json
-import os
-
-CURRENT_SETTINGS = {
-    'captionMode': 'sliding'
-}
-
 class DashboardHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
             self.path = '/index.html'
+        elif self.path == '/api/current_scene':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(CURRENT_SCENE).encode('utf-8'))
+            return
         return super().do_GET()
 
     def do_POST(self):
@@ -81,6 +104,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 print(f"\nSettings updated from Dashboard: {CURRENT_SETTINGS}")
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(b'{"status": "ok"}')
             except Exception as e:
@@ -100,7 +124,6 @@ def get_word_index(words, line_duration, time_into_line):
     total_chars = sum(len(w) for w in words)
     if total_chars == 0: total_chars = 1
     
-    # Base estimated duration: 0.07s per char + 0.15s gap per word
     estimated_time = (total_chars * 0.07) + (len(words) * 0.15)
     
     if line_duration > 10.0:
@@ -115,10 +138,8 @@ def get_word_index(words, line_duration, time_into_line):
     for i, w in enumerate(words):
         chars_so_far += len(w)
         estimated_finish = (chars_so_far * 0.07) + ((i+1) * 0.15)
-        
         ratio = estimated_finish / estimated_time
         finish_time = ratio * anim_duration
-        
         if time_into_line < finish_time:
             return i
             
@@ -137,6 +158,7 @@ def listen_for_stop():
             pass
 
 async def main():
+    global CURRENT_SCENE
     threading.Thread(target=start_server, daemon=True).start()
     threading.Thread(target=listen_for_stop, daemon=True).start()
     
@@ -160,14 +182,10 @@ async def main():
             print(f"Could not connect to {port}. Retrying in 2 seconds... Error: {e}")
             return False
 
-    connect_serial()
-
-    current_song = None
+    current_song = ""
     lyrics = []
     last_sent_text = ""
     last_metadata_time = 0
-    SYNC_OFFSET_SECONDS = 0.5
-
     last_api_pos_ms = 0
     local_sync_time = time.time()
     last_sent_mode = ""
@@ -200,6 +218,7 @@ async def main():
                 if song_key != current_song:
                     print(f"\nNew song detected: {song_key}")
                     current_song = song_key
+                    director.reset_song(title)
                     lyrics = []
                     last_sent_text = ""
                     
@@ -224,19 +243,21 @@ async def main():
                 if current_font != last_sent_font:
                     ser.write(f"F|{current_font.upper()}\n".encode('utf-8', 'replace'))
                     last_sent_font = current_font
-                    last_sent_text = "" # force redraw
+                    last_sent_text = "" 
 
                 # Send companion mascot updates if changed
                 current_comp = CURRENT_SETTINGS.get('companion', 'cat')
                 if current_comp != last_sent_companion:
                     ser.write(f"C|{current_comp.upper()}\n".encode('utf-8', 'replace'))
                     last_sent_companion = current_comp
-                    last_sent_text = "" # force redraw
+                    last_sent_text = "" 
 
                 # Send mode updates if changed
-                current_mode = CURRENT_SETTINGS.get('captionMode', 'normal')
+                current_mode = CURRENT_SETTINGS.get('captionMode', 'sketchbook')
                 if current_mode != last_sent_mode:
-                    if current_mode == 'giant':
+                    if current_mode == 'sketchbook':
+                        ser.write(f"S|SKETCHBOOK\n".encode('utf-8', 'replace'))
+                    elif current_mode == 'giant':
                         ser.write(f"S|GIANT\n".encode('utf-8', 'replace'))
                     elif current_mode == 'kinetic2':
                         ser.write(f"S|KINETIC2\n".encode('utf-8', 'replace'))
@@ -247,7 +268,7 @@ async def main():
                     else:
                         ser.write(f"S|NORMAL\n".encode('utf-8', 'replace'))
                     last_sent_mode = current_mode
-                    last_sent_text = "" # force re-render
+                    last_sent_text = ""
                     last_sent_word_index = -1
 
                 if lyrics:
@@ -273,13 +294,29 @@ async def main():
                         elif logo_set == 'star': current_lyric = "★"
                         elif logo_set == 'smile': current_lyric = "☺"
                         
-                    if current_mode == 'giant' or current_mode == 'kinetic' or current_mode == 'kinetic2':
+                    # =====================================
+                    # SKETCHBOOK / SEMANTIC DIRECTOR MODE
+                    # =====================================
+                    if current_mode == 'sketchbook':
+                        if current_lyric != last_sent_text:
+                            last_sent_text = current_lyric
+                            line_duration = max(1.5, next_lyric_time - current_lyric_time)
+                            scene = director.analyze_line(current_lyric, duration=line_duration, song_position=position_s)
+                            scene['title'] = title
+                            scene['artist'] = artist
+                            CURRENT_SCENE = scene
+                            
+                            # Format and send ESP32 Sketchbook Packet
+                            esp_packet = sketchbook.format_esp32_packet(scene)
+                            ser.write(esp_packet.encode('utf-8', 'replace'))
+                            print(f"[{position_s:.2f}s] [🎬 {scene['metaphor']}|🎨 {scene['doodle']}] {current_lyric}")
+
+                    elif current_mode == 'giant' or current_mode == 'kinetic' or current_mode == 'kinetic2':
                         words = current_lyric.split()
                         if not words: words = [current_lyric]
                         
                         line_duration = next_lyric_time - current_lyric_time
                         time_into_line = position_s - current_lyric_time
-                        
                         word_index = get_word_index(words, line_duration, time_into_line)
                         
                         word_to_send = words[word_index]
@@ -288,7 +325,6 @@ async def main():
                             ser.write(f"L|{word_to_send}|\n".encode('utf-8', 'replace'))
                             
                     elif current_mode == 'sliding':
-                        # Send the full line when it changes
                         if current_lyric != last_sent_text:
                             last_sent_text = current_lyric
                             print(f"[{position_s:.2f}s] {current_lyric}")
@@ -298,7 +334,6 @@ async def main():
                         if words:
                             line_duration = next_lyric_time - current_lyric_time
                             time_into_line = position_s - current_lyric_time
-                            
                             word_index = get_word_index(words, line_duration, time_into_line)
                             
                             if word_index != last_sent_word_index:
@@ -313,19 +348,32 @@ async def main():
             else:
                 if current_song != "NONE":
                     current_song = "NONE"
+                    CURRENT_SCENE = {
+                        "type": "idle",
+                        "raw_text": "Waiting for Spotify",
+                        "prefix": "",
+                        "focal_word": "Spotify",
+                        "suffix": "",
+                        "metaphor": "idle",
+                        "doodle": "none",
+                        "tilt_angle": 0,
+                        "has_underline": False,
+                        "title": "Waiting for Spotify",
+                        "artist": ""
+                    }
                     ser.write(f"M|Waiting for Spotify|...|0|1000\n".encode('utf-8', 'replace'))
                     ser.write(f"L|Play a song|\n".encode('utf-8', 'replace'))
 
         except serial.SerialException as e:
             print(f"Serial connection lost: {e}")
             ser = None
-        except OSError as e:
-            print(f"OS Error (possibly unplugged): {e}")
-            ser = None
         except Exception as e:
-            print("Error:", e)
-            
-        await asyncio.sleep(0.05) # faster loop for word-by-word
+            pass
+
+        await asyncio.sleep(0.03)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nExiting...")
