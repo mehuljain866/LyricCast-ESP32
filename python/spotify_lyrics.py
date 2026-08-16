@@ -21,7 +21,7 @@ sketchbook = SketchbookEngine()
 
 CURRENT_SETTINGS = {
     'captionMode': 'sketchbook',
-    'font': 'handwritten',
+    'font': 'animated',
     'companion': 'cat',
     'logo': 'music',
     'uiScale': '100'

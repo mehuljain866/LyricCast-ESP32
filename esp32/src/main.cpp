@@ -83,14 +83,14 @@ float easeOutBounce(float t) {
 // FONT THEMES & FAMILIES
 // ==========================================
 enum FontStyle {
-  FONT_MIX = 0,          // Dynamic Indie Mix (Randomized Pairings)
-  FONT_HANDWRITTEN = 1,  // Cursive & Italic Script
+  FONT_ANIMATED = 0,     // Dynamic Genre & Energy Reactive Kinetic Type
+  FONT_MIX = 1,          // Dynamic Indie Mix (Randomized Pairings)
   FONT_SANS = 2,         // Modern Clean Sans
   FONT_SERIF = 3,        // Classic Editorial Serif
   FONT_MONO = 4,         // Retro Monospace
   FONT_ARCADE = 5        // Retro Monospace / Sans
 };
-FontStyle currentFontStyle = FONT_MIX;
+FontStyle currentFontStyle = FONT_ANIMATED;
 
 const GFXfont* sansFonts[] = {&FreeSansBold18pt7b, &FreeSansBold12pt7b, &FreeSansBold9pt7b, &FreeSans9pt7b, NULL};
 int sansHeights[] = {28, 20, 15, 12, 8};
@@ -108,7 +108,7 @@ const GFXfont* arcadeFonts[] = {&FreeMonoBold12pt7b, &FreeMonoBold9pt7b, &FreeMo
 int arcadeHeights[] = {18, 14, 10, 8, 8};
 
 const GFXfont** getActiveFonts() {
-  if (currentFontStyle == FONT_HANDWRITTEN) return scriptFonts;
+  if (currentFontStyle == FONT_ANIMATED) return scriptFonts;
   if (currentFontStyle == FONT_SERIF) return serifFonts;
   if (currentFontStyle == FONT_MONO) return monoFonts;
   if (currentFontStyle == FONT_ARCADE) return arcadeFonts;
@@ -117,7 +117,7 @@ const GFXfont** getActiveFonts() {
 }
 
 int* getActiveHeights() {
-  if (currentFontStyle == FONT_HANDWRITTEN) return scriptHeights;
+  if (currentFontStyle == FONT_ANIMATED) return scriptHeights;
   if (currentFontStyle == FONT_SERIF) return serifHeights;
   if (currentFontStyle == FONT_MONO) return monoHeights;
   if (currentFontStyle == FONT_ARCADE) return arcadeHeights;
@@ -1241,9 +1241,20 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     availWidth = 119;
   }
 
-  // Font Preset Selection
+  // Font Preset Selection (Matches Song Genre & Energy Profile!)
   int prefixFont = 3, focalFont = 0, suffixFont = 3;
-  if (currentFontStyle == FONT_SANS) {
+  if (currentFontStyle == FONT_ANIMATED || currentFontStyle == FONT_MIX) {
+    switch (s.fontPreset % 8) {
+      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;  // Indie / Chill / Ballad (Cursive Italic 9 + Bold Cursive 12)
+      case 1: prefixFont = 4; focalFont = 1; suffixFont = 6; break;  // Pop / Anthem / High Energy (Sans 9 + Bold Sans 12 + Oblique 9)
+      case 2: prefixFont = 3; focalFont = 2; suffixFont = 8; break;  // R&B / Soul / Romantic (Serif Italic 9 + Serif Bold 12 + Serif Bold 9)
+      case 3: prefixFont = 9; focalFont = 14; suffixFont = 5; break; // Hip-Hop / Tech / Cyber (Mono 9 + Mono Bold 12 + Mono Bold 9)
+      case 4: prefixFont = 6; focalFont = 11; suffixFont = 4; break; // Playful / Indie Pop (Oblique 9 + Serif Italic 12 + Sans 9)
+      case 5: prefixFont = 7; focalFont = 10; suffixFont = 7; break; // Modern Clean Anthem (Sans Bold 9 + Sans 12 + Sans Bold 9)
+      case 6: prefixFont = 5; focalFont = 1; suffixFont = 5; break;  // Heavy Rock / Impact (Mono Bold 9 + Bold Sans 12 + Mono Bold 9)
+      case 7: prefixFont = 3; focalFont = 0; suffixFont = 4; break;  // Dreamy Ethereal (Cursive Italic 9 + Bold Cursive 12 + Sans 9)
+    }
+  } else if (currentFontStyle == FONT_SANS) {
     prefixFont = 4; focalFont = 1; suffixFont = 4;
   } else if (currentFontStyle == FONT_SERIF) {
     prefixFont = 3; focalFont = 2; suffixFont = 8;
@@ -1251,19 +1262,6 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     prefixFont = 9; focalFont = 14; suffixFont = 5;
   } else if (currentFontStyle == FONT_ARCADE) {
     prefixFont = 5; focalFont = 14; suffixFont = 7;
-  } else if (currentFontStyle == FONT_HANDWRITTEN) {
-    prefixFont = 3; focalFont = 0; suffixFont = 11;
-  } else if (currentFontStyle == FONT_MIX) {
-    switch (s.fontPreset % 8) {
-      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;
-      case 1: prefixFont = 6; focalFont = 1; suffixFont = 4; break;
-      case 2: prefixFont = 4; focalFont = 2; suffixFont = 3; break;
-      case 3: prefixFont = 9; focalFont = 14; suffixFont = 5; break;
-      case 4: prefixFont = 7; focalFont = 11; suffixFont = 6; break;
-      case 5: prefixFont = 8; focalFont = 10; suffixFont = 8; break;
-      case 6: prefixFont = 3; focalFont = 7; suffixFont = 5; break;
-      case 7: prefixFont = 5; focalFont = 0; suffixFont = 4; break;
-    }
   }
 
   // 1. MONOLITH COMPOSITION (Giant single word)
@@ -1613,11 +1611,12 @@ void parseSerialData(String data) {
     String fontCode = data.substring(2);
     fontCode.trim();
     if (fontCode == "MIX" || fontCode == "RANDOM") currentFontStyle = FONT_MIX;
-    else if (fontCode == "HANDWRITTEN") currentFontStyle = FONT_HANDWRITTEN;
+    else if (fontCode == "ANIMATED" || fontCode == "HANDWRITTEN") currentFontStyle = FONT_ANIMATED;
     else if (fontCode == "SERIF") currentFontStyle = FONT_SERIF;
     else if (fontCode == "MONO") currentFontStyle = FONT_MONO;
     else if (fontCode == "ARCADE") currentFontStyle = FONT_ARCADE;
-    else currentFontStyle = FONT_SANS;
+    else if (fontCode == "SANS") currentFontStyle = FONT_SANS;
+    else currentFontStyle = FONT_ANIMATED;
     
     currentLayout = calculateLayout(currentLyric);
   }

@@ -80,6 +80,16 @@ DOODLE_MAP = {
     'arrow': ['you', 'me', 'her', 'him', 'them', 'there', 'here', 'point', 'straight', 'direct']
 }
 
+# Genre & Energy Profiles for Intelligent Typographic Styling
+GENRES = {
+    'ROCK': ['rock', 'punk', 'metal', 'grunge', 'nirvana', 'arctic monkeys', 'blink-182', 'greenday', 'linkin', 'radiohead', 'strokes', 'killers', 'foals', 'guitar', 'drums'],
+    'HIPHOP': ['rap', 'hiphop', 'trap', 'drill', 'drake', 'kendrick', 'travis', 'kanye', 'carti', 'future', '21 savage', 'eminem', 'cole', 'flacko', 'asap', 'beat', 'flow'],
+    'INDIE': ['indie', 'neighbourhood', 'malcolm todd', 'dominic fike', 'clairo', 'boy pablo', 'mac demarco', 'rex orange', 'phoebe', 'cigarettes after sex', 'beach house', 'wallows', 'steve lacy', 'omar apollo'],
+    'POP': ['pop', 'sabrina carpenter', 'dua lipa', 'taylor swift', 'ariana grande', 'olivia rodrigo', 'charli xcx', 'billie eilish', 'chappell roan', 'katy perry', 'bruno mars'],
+    'RB_SOUL': ['r&b', 'soul', 'adele', 'frank ocean', 'sza', 'daniel caesar', 'giveon', 'brent faiyaz', 'h.e.r.', 'sam smith', 'leon bridges'],
+    'ELECTRONIC': ['electronic', 'edm', 'dance', 'synth', 'daft punk', 'avicii', 'calvin harris', 'skrillex', 'disclosure', 'odesza', 'flume', 'fred again']
+}
+
 STOP_WORDS = {
     'a', 'an', 'the', 'and', 'or', 'but', 'if', 'in', 'on', 'at', 'to', 'for', 'with', 'by',
     'about', 'as', 'into', 'like', 'through', 'after', 'over', 'between', 'out', 'against',
@@ -94,6 +104,8 @@ class LyricDirector:
         self.current_seed = 42
         self.last_doodle = ""
         self.last_composition = ""
+        self.song_genre = "INDIE"
+        self.base_energy = 3 # 1 (mellow/ballad) to 5 (explosive/rock)
 
     def reset_song(self, song_title, artist=""):
         self.chorus_counts = {}
@@ -101,6 +113,29 @@ class LyricDirector:
         self.last_doodle = ""
         self.last_composition = ""
         
+        # Analyze track metadata to determine genre & energy profile
+        track_meta = f"{song_title} {artist}".lower()
+        detected_genre = "INDIE" # Default fallback
+        for genre, keywords in GENRES.items():
+            for kw in keywords:
+                if kw in track_meta:
+                    detected_genre = genre
+                    break
+            if detected_genre != "INDIE":
+                break
+
+        self.song_genre = detected_genre
+        
+        # Base energy calculation
+        if detected_genre in ['ROCK', 'HIPHOP', 'ELECTRONIC']:
+            self.base_energy = 4
+        elif detected_genre in ['POP']:
+            self.base_energy = 3
+        elif detected_genre in ['RB_SOUL']:
+            self.base_energy = 2
+        else:
+            self.base_energy = 3
+
         seed_str = f"{song_title}-{artist}"
         hash_val = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest()[:8], 16)
         self.current_seed = hash_val & 0xFFFFFFFF
@@ -195,12 +230,20 @@ class LyricDirector:
 
         # PRESERVE 100% OF ALL SUNG WORDS (ZERO TRUNCATION!)
         prefix_str = " ".join(prefix_words).strip()
-        suffix_str = " ".join(suffix_words).strip().strip()
+        suffix_str = " ".join(suffix_words).strip()
 
-        # 4. Rich Compositional Archetypes (8 Archetypes!)
+        # 4. Line Energy & Emotion Scoring
+        line_energy = self.base_energy
+        if any(w.isupper() and len(w) > 1 for w in words) or "!" in clean_text:
+            line_energy += 2
+        if detected_metaphor in ["RUNNING", "SCREAM", "SHAKE", "FIRE"]:
+            line_energy += 1
+        elif detected_metaphor in ["ALONE", "FALLING", "STAY"]:
+            line_energy -= 1
+
+        # 5. Rich Compositional Archetypes
         compositions = ["CENTER", "DIAGONAL", "STACKED", "INVERSE", "COMIC", "SPLIT", "DREAMY"]
         
-        # Smart assignment based on line characteristics
         if len(words) == 1:
             composition = random.choice(["MONOLITH", "INVERSE", "CENTER"])
         elif len(focal_word) > 8:
@@ -217,24 +260,44 @@ class LyricDirector:
 
         self.last_composition = composition
 
-        # 5. Dynamic Visual FX Flags (Bitmask: 1=InverseBadge, 2=CornerFrames, 4=LeftAccentBar)
+        # 6. Dynamic Visual FX Flags (Bitmask: 1=InverseBadge, 2=CornerFrames, 4=LeftAccentBar)
         fx_flags = 0
-        if composition == "INVERSE" or (random.random() < 0.15 and len(focal_word) > 2):
-            fx_flags |= 1 # Inverse Badge
-        if composition == "MONOLITH" or random.random() < 0.12:
-            fx_flags |= 2 # Corner Frames
-        if composition == "STACKED":
+        if (composition == "INVERSE" or line_energy >= 4) and len(focal_word) > 2:
+            fx_flags |= 1 # Inverse Badge for punchy words / high energy
+        if composition == "MONOLITH" or (line_energy <= 2 and random.random() < 0.2):
+            fx_flags |= 2 # Corner Frames for dramatic/monolithic moments
+        if composition == "STACKED" or self.song_genre == 'HIPHOP':
             fx_flags |= 4 # Left Accent Bar
 
-        # 6. Dynamic Tilt Angle & Underline
+        # 7. Dynamic Tilt Angle & Underline
         tilt_angle = 0
         if composition not in ["MONOLITH", "STACKED"]:
             tilt_angle = random.choice([-3, 0, 3])
             
-        has_underline = (detected_doodle == "UNDERLINE" or (random.random() < 0.15 and detected_doodle in ["NONE", "NOTE"])) and len(focal_word) > 2
+        has_underline = (detected_doodle == "UNDERLINE" or (random.random() < 0.18 and detected_doodle in ["NONE", "NOTE"])) and len(focal_word) > 2
 
-        # 7. Deep Font Preset Pairing
-        font_preset = random.randint(0, 7)
+        # 8. Genre & Energy-Reactive Font Preset Selection
+        # Presets:
+        # 0: Indie/Chill/Acoustic (Serif Italic + Bold Italic)
+        # 1: Pop/Anthem/Bold (Sans + Bold Sans 12)
+        # 2: R&B/Ballad/Romantic (Serif Italic + Bold Serif 12)
+        # 3: Tech/Hip-Hop/Cyber (Mono + Bold Mono 12)
+        # 4: Playful/Upbeat Pop (Sans Oblique + Serif Italic 12)
+        # 5: Modern Clean/Anthem (Bold Sans 9 + Sans 12)
+        # 6: Heavy Impact/Rock (Mono Bold 9 + Bold Sans 12)
+        # 7: Dreamy/Ethereal (Serif Italic 9 + Bold Italic 12 + Sans 9)
+        if self.song_genre == 'ROCK':
+            font_preset = random.choice([1, 5, 6]) if line_energy >= 4 else random.choice([0, 1, 6])
+        elif self.song_genre == 'HIPHOP':
+            font_preset = random.choice([3, 5, 6])
+        elif self.song_genre == 'POP':
+            font_preset = random.choice([1, 4, 5]) if line_energy >= 3 else random.choice([0, 4, 7])
+        elif self.song_genre == 'RB_SOUL':
+            font_preset = random.choice([0, 2, 7])
+        elif self.song_genre == 'ELECTRONIC':
+            font_preset = random.choice([1, 3, 5])
+        else: # INDIE / Alternative
+            font_preset = random.choice([0, 4, 7]) if line_energy <= 3 else random.choice([0, 1, 4, 7])
 
         # Responsive Snappy Timing
         line_duration_ms = max(800, int(duration * 1000))
