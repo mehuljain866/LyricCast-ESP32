@@ -169,6 +169,15 @@ class LyricDirector:
         prefix_str = " ".join(prefix_words).strip()
         suffix_str = " ".join(suffix_words).strip()
 
+        # Text overflow protection for 128px screen width
+        if len(prefix_str) > 20:
+            pw = prefix_str.split()
+            prefix_str = " ".join(pw[-3:]) if len(pw) >= 3 else prefix_str[:20]
+
+        if len(suffix_str) > 20:
+            sw = suffix_str.split()
+            suffix_str = " ".join(sw[:3]) if len(sw) >= 3 else suffix_str[:20]
+
         # 4. Rich Compositional Archetypes (8 Archetypes!)
         compositions = ["CENTER", "DIAGONAL", "STACKED", "MONOLITH", "INVERSE", "COMIC", "SPLIT", "DREAMY"]
         
