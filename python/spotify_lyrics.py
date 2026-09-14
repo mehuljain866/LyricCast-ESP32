@@ -21,7 +21,7 @@ director = LyricDirector()
 sketchbook = SketchbookEngine()
 
 CURRENT_SETTINGS = {
-    'captionMode': 'sketchbook',
+    'captionMode': 'expressive',
     'font': 'animated',
     'companion': 'cat',
     'logo': 'music',
