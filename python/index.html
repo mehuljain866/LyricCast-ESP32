@@ -595,6 +595,12 @@
         </div>
 
         <div class="form-group">
+            <label>Spotify Official Lyrics Cookie (sp_dc) <span style="font-size:0.75rem; color:#718096;">(Optional - Tier 1 Master Sync)</span></label>
+            <input type="password" id="spotify-sp-dc" placeholder="Paste sp_dc cookie to unlock official Spotify lyrics...">
+            <div style="font-size:0.75rem; color:#718096; margin-top:0.3rem;">When left blank, LyricCast uses exact duration-matched master cuts from LRCLIB & community sources.</div>
+        </div>
+
+        <div class="form-group">
             <label>Device Name</label>
             <input type="text" id="deviceName" value="ESP32-Music-Box">
         </div>
@@ -622,10 +628,12 @@
     // HTTP API Integration
     async function saveSettings() {
         const autoRunEl = document.getElementById('auto-run-boot');
+        const spDcEl = document.getElementById('spotify-sp-dc');
         const settings = {
             watchMode: document.getElementById('watch-mode').checked,
             genreAdaptiveFonts: document.getElementById('genre-adaptive-fonts').checked,
             autoRunBoot: autoRunEl ? autoRunEl.checked : false,
+            sp_dc: spDcEl ? spDcEl.value.trim() : '',
             captionMode: document.getElementById('caption-mode-select').value,
             logo: document.querySelector('input[name="logo"]:checked').value,
             uiScale: document.getElementById('ui-scale').value,
@@ -657,6 +665,10 @@
                 if (s.autoRunBoot !== undefined) {
                     const el = document.getElementById('auto-run-boot');
                     if (el) el.checked = Boolean(s.autoRunBoot);
+                }
+                if (s.sp_dc !== undefined) {
+                    const el = document.getElementById('spotify-sp-dc');
+                    if (el) el.value = s.sp_dc;
                 }
                 if (s.genreAdaptiveFonts !== undefined) {
                     const el = document.getElementById('genre-adaptive-fonts');

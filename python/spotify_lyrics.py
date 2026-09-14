@@ -13,6 +13,7 @@ from winsdk.windows.media.control import GlobalSystemMediaTransportControlsSessi
 
 from director import LyricDirector
 from sketchbook_engine import SketchbookEngine
+from lyrics_tree import lyrics_tree
 
 SYNC_OFFSET_SECONDS = 0.20
 
@@ -58,9 +59,10 @@ async def get_media_info():
         if info and timeline and playback:
             pos_ms = timeline.position.total_seconds() * 1000
             dur_ms = timeline.end_time.total_seconds() * 1000
-            is_playing = (playback.playback_status == 4) 
-            return info.title, info.artist, pos_ms, dur_ms, is_playing
-    return None, None, 0, 1000, False
+            is_playing = (playback.playback_status == 4)
+            album = getattr(info, 'album_title', '') or ''
+            return info.title, info.artist, album, pos_ms, dur_ms, is_playing
+    return None, None, None, 0, 1000, False
 
 def parse_lrc(lrc_text):
     if not lrc_text: return []
@@ -251,7 +253,7 @@ async def main():
                     await asyncio.sleep(2)
                     continue
 
-            title, artist, api_pos_ms, dur_ms, is_playing = await get_media_info()
+            title, artist, album, api_pos_ms, dur_ms, is_playing = await get_media_info()
             
             if title and artist:
                 song_key = f"{title} - {artist}"
@@ -278,10 +280,12 @@ async def main():
                     ser.write(f"L|Fetching lyrics...|\n".encode('utf-8', 'replace'))
                     
                     try:
-                        lrc = syncedlyrics.search(f"{title} {artist}")
+                        sp_dc = CURRENT_SETTINGS.get('sp_dc', '')
+                        duration_s = (dur_ms / 1000.0) if dur_ms else None
+                        lrc = lyrics_tree.get_lyrics(title, artist, album=album, duration_s=duration_s, sp_dc=sp_dc)
                         lyrics = parse_lrc(lrc)
                         # Re-query fresh position after lyrics download delay
-                        _, _, fresh_pos_ms, _, _ = await get_media_info()
+                        _, _, _, fresh_pos_ms, _, _ = await get_media_info()
                         if fresh_pos_ms > 0:
                             api_pos_ms = fresh_pos_ms
                             last_api_pos_ms = fresh_pos_ms
