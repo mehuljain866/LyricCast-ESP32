@@ -195,3 +195,27 @@
   3. **Repetition Cycling**: Added song refrain repetition tracker that alternates complementary emoji pairs across repeated choruses (e.g. Chorus 1: 🪩+💃, Chorus 2: 💃+⚡, Chorus 3: 🪩+✨).
   4. **Dynamic Scaler & Authentic Kinetic Motions**: Implemented real-time dynamic scaling in firmware to render genuine double-beat `lub-dub` heartbeat throbs ($0.85 \leftrightarrow 1.25\times$), flame chaotic jitter, and rhythmic dance sways.
   5. **Multi-Emoji Streaming**: Extended serial protocol (`BMP:<hex1>,<hex2>`) to stream up to 2 emojis per line revealed dynamically across the panning camera.
+
+---
+
+### Roadblock 6.6: Concrete Lexicon Gaps ("Trees" Showing Music Note) & 1D Rail Confinement
+* **The Symptom:**
+  1. Lyrics mentioning concrete nouns like *"trees"* displayed a generic music note (`🎵`), and world/earth/mountain/city words failed to trigger context-accurate emojis.
+  2. The virtual camera was confined to a rigid 1-dimensional horizontal line ($X$-axis rail), making short lines feel stationary and lacking cinematic, organic dynamism.
+  3. Paired emojis were placed along a flat horizontal line, and eye emojis (`👀`, `👁️`) bobbed up and down rather than glancing and scanning side-to-side.
+* **The Root Cause:**
+  1. Semantic dictionary lacked nature/flora, geographical, and landscape mappings, while the default fallback palette contained `🎵` and `🎶`, causing non-musical lyrics without a direct match to display musical icons.
+  2. Camera transform in firmware only modulated $camX$, keeping $camY = 0$.
+  3. Motion choreography lacked a horizontal scan vector for gaze-based emojis.
+* **The Solution:**
+  1. **Concrete Lexicon Expansion & Musical Fallback Purge**:
+     - Added comprehensive coverage for trees (`🌲`, `🌳`, `🌴`, `🌱`), Earth/world (`🌍`), mountains (`🏔️`), city/skyscrapers (`🏙️`), maps/borders (`🗺️`), flowers (`🌺`), leaves (`🍁`).
+     - Completely removed `🎵` and `🎶` from `FALLBACK_PALETTE`, reserving musical note emojis exclusively for genuine musical terms (sing, song, guitar, piano, melody).
+  2. **2D Cinematic Open Canvas Engine**:
+     - Implemented multi-axis camera motion: non-linear crane arcs ($camY = \sin(\text{progress} \cdot \pi) \cdot 6.0f$), vertical ascents for flying metaphors, and descents for falling metaphors.
+     - Dynamic diagonal emoji placement in 2D mode: Emoji 1 sits top-left ($Y = 8$), Emoji 2 sits bottom-right ($Y = 28$), framing lyrics across an open 2D canvas.
+  3. **Watchful Eye Scan Motion (`MOTION_EYES_SCAN = 5`)**:
+     - Added horizontal gaze-scanning jitter (`sin(now * 0.005f) * 3.5f`) mapped specifically to `👀` and `👁️`.
+  4. **Dashboard Camera Dimension Toggle**:
+     - Added a segmented radio toggle to the Web Dashboard allowing instant switching between `1D: X-Axis (Horizontal Sweep)` and `2D: XY-Axis (Cinematic Open Canvas)`, with full auto-saving and real-time syncing to ESP32 firmware via bit 12 (`0x1000`) of `fx_flags`.
+

@@ -1328,6 +1328,10 @@ void drawKineticEmojiScaled(const uint8_t* bitmap, int anchorX, int anchorY, uin
       }
       break;
     }
+    case 5: { // MOTION_EYES_SCAN: Watchful horizontal glance scanning
+      drawX += (int)(sin(now * 0.005f) * 3.5f);
+      break;
+    }
     default: { // MOTION_FLOAT: Gentle sinusoidal float
       drawY += (int)(sin(now * 0.006f) * 2.5f);
       break;
@@ -1397,6 +1401,8 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     prefixFont = 5; focalFont = 14; suffixFont = 5;
   }
 
+  bool is2DCanvas = (s.fxFlags & 0x1000) != 0;
+
   // 1. MONOLITH COMPOSITION (Giant single word)
   if (comp == "MONOLITH") {
     display.setFont(&FreeSansBold18pt7b);
@@ -1420,7 +1426,11 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       float panProgress = (progress <= 0.15f) ? 0.0f : ((progress >= 0.85f) ? 1.0f : easeInOutQuad((progress - 0.15f) / 0.70f));
       cameraX = (int)(maxScroll * panProgress);
     }
-    int fy = 29 + yOffset + (int)breathe;
+    int cameraY = 0;
+    if (is2DCanvas) {
+      cameraY = (int)(sin(progress * 3.14159f) * 4.0f);
+    }
+    int fy = 29 + yOffset + (int)breathe - cameraY;
     if (fy >= -10 && fy <= 55) {
       drawProgressiveText(s.focalWord, fx - cameraX, fy, focalFont, progress);
       if (s.underline) drawProgressiveUnderline(fx - cameraX - 2, fx - cameraX + fw + 2, fy + 3, progress);
@@ -1429,7 +1439,10 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       }
     }
     if (s.hasBitmap && s.emojiCount >= 1) {
-      drawKineticEmojiScaled(s.bitmapData, emojiX - cameraX, 16 + yOffset, s.motionType1, progress, now);
+      drawKineticEmojiScaled(s.bitmapData, emojiX - cameraX, 16 + yOffset - cameraY, s.motionType1, progress, now);
+    }
+    if (s.hasBitmap && s.emojiCount >= 2) {
+      drawKineticEmojiScaled(s.bitmapData2, emojiX + 20 - cameraX, 16 + yOffset - cameraY, s.motionType2, progress, now);
     }
     return;
   }
@@ -1458,13 +1471,27 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
   int totalSceneW = 0;
 
   if (s.hasBitmap && s.emojiCount == 2) {
-    emoji1X = 2;
-    textStartX = 22;
-    emoji2X = textStartX + textMaxW + 6;
-    totalSceneW = emoji2X + 18;
+    if (is2DCanvas) {
+      // Dynamic diagonal 2D canvas placement:
+      // Emoji 1 top-left, Emoji 2 bottom-right
+      emoji1X = 2;
+      emoji1Y = 8 + yOffset;
+      textStartX = 20;
+      emoji2X = textStartX + textMaxW + 4;
+      emoji2Y = 28 + yOffset;
+      totalSceneW = emoji2X + 18;
+    } else {
+      emoji1X = 2;
+      emoji1Y = 16 + yOffset;
+      textStartX = 22;
+      emoji2X = textStartX + textMaxW + 6;
+      emoji2Y = 16 + yOffset;
+      totalSceneW = emoji2X + 18;
+    }
   } else if (s.hasBitmap && s.emojiCount == 1) {
     textStartX = 4;
     emoji1X = textStartX + textMaxW + 6;
+    emoji1Y = 16 + yOffset;
     totalSceneW = emoji1X + 18;
   } else {
     textStartX = 4;
@@ -1473,6 +1500,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
 
   // 4. Virtual Camera Pan Controller
   int cameraX = 0;
+  int cameraY = 0;
   if (totalSceneW <= 124) {
     // Short line: Centered on screen
     int extra = (128 - totalSceneW) / 2;
@@ -1495,6 +1523,17 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     cameraX = (int)(maxScroll * panProgress);
   }
 
+  if (is2DCanvas) {
+    // 2D Cinematic Open Canvas: non-linear crane swoop / multi-axis diagonal trajectory
+    if (s.metaphor == "FLYING") {
+      cameraY = (int)((progress - 0.5f) * -10.0f);
+    } else if (s.metaphor == "FALLING") {
+      cameraY = (int)((progress - 0.5f) * 10.0f);
+    } else {
+      cameraY = (int)(sin(progress * 3.14159f) * 6.0f);
+    }
+  }
+
   // 5. Draw Visual Effects
   if (s.fxFlags & 2) {
     drawCornerFrames(progress);
@@ -1505,48 +1544,51 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
   }
 
   // 6. Draw Prefix
-  if (hasPrefix && prefixY >= -10 && prefixY <= 55) {
+  int effPrefixY = prefixY - cameraY;
+  if (hasPrefix && effPrefixY >= -10 && effPrefixY <= 55) {
     int px = textStartX + (comp == "STACKED" ? 0 : (textMaxW - (int)pw) / 2) - cameraX;
-    drawProgressiveText(s.prefix, px, prefixY, prefixFont, progress);
+    drawProgressiveText(s.prefix, px, effPrefixY, prefixFont, progress);
   }
 
   // 7. Draw Focal Word
-  if (hasFocal && focalY >= -10 && focalY <= 55) {
+  int effFocalY = focalY - cameraY;
+  if (hasFocal && effFocalY >= -10 && effFocalY <= 55) {
     int fx = textStartX + (comp == "STACKED" ? 0 : (textMaxW - (int)fw) / 2) - cameraX;
     if (s.fxFlags & 1) {
       int rx = max(0, fx - 3);
-      int ry = max(0, focalY - (int)fh - 1);
+      int ry = max(0, effFocalY - (int)fh - 1);
       int rw = (int)fw + 6;
       int rh = (int)fh + 4;
       display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
       display.setTextColor(SSD1306_BLACK);
-      drawProgressiveText(s.focalWord, fx, focalY, focalFont, progress);
+      drawProgressiveText(s.focalWord, fx, effFocalY, focalFont, progress);
       display.setTextColor(SSD1306_WHITE);
     } else {
-      drawProgressiveText(s.focalWord, fx, focalY, focalFont, progress);
+      drawProgressiveText(s.focalWord, fx, effFocalY, focalFont, progress);
     }
 
     if (s.underline && !(s.fxFlags & 1)) {
-      drawProgressiveUnderline(fx - 2, fx + fw + 2, min(45, focalY + 3), progress);
+      drawProgressiveUnderline(fx - 2, fx + fw + 2, min(45, effFocalY + 3), progress);
     }
 
     if (!s.hasBitmap && s.doodle != "NONE") {
-      drawDoodle(s.doodle, fx + fw + 6, focalY - 5, progress, now);
+      drawDoodle(s.doodle, fx + fw + 6, effFocalY - 5, progress, now);
     }
   }
 
   // 8. Draw Suffix
-  if (hasSuffix && suffixY >= -10 && suffixY <= 55) {
+  int effSuffixY = suffixY - cameraY;
+  if (hasSuffix && effSuffixY >= -10 && effSuffixY <= 55) {
     int sx = textStartX + (comp == "STACKED" ? 0 : (textMaxW - (int)sw) / 2) - cameraX;
-    drawProgressiveText(s.suffix, sx, suffixY, suffixFont, progress);
+    drawProgressiveText(s.suffix, sx, effSuffixY, suffixFont, progress);
   }
 
   // 9. Draw Kinetic Emojis (With Camera Pan Offset)
   if (s.hasBitmap && s.emojiCount >= 1) {
-    drawKineticEmojiScaled(s.bitmapData, emoji1X - cameraX, emoji1Y, s.motionType1, progress, now);
+    drawKineticEmojiScaled(s.bitmapData, emoji1X - cameraX, emoji1Y - cameraY, s.motionType1, progress, now);
   }
   if (s.hasBitmap && s.emojiCount >= 2) {
-    drawKineticEmojiScaled(s.bitmapData2, emoji2X - cameraX, emoji2Y, s.motionType2, progress, now);
+    drawKineticEmojiScaled(s.bitmapData2, emoji2X - cameraX, emoji2Y - cameraY, s.motionType2, progress, now);
   }
 }
 

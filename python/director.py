@@ -109,6 +109,10 @@ class LyricDirector:
         self.genre_adaptive = True
         self.default_font_preset = 0 # 0=Classic Animated Cursive
         self.song_font_preset = 0
+        self.camera_motion = "2d" # "1d"=horizontal sweep, "2d"=open canvas diagonal swoop
+
+    def set_camera_motion(self, mode: str):
+        self.camera_motion = (mode or "2d").lower()
 
     def set_genre_adaptive(self, enabled: bool):
         self.genre_adaptive = enabled
@@ -362,7 +366,15 @@ class LyricDirector:
                     scene["emoji"] = emojis_data[0]["emoji"]
                     scene["emoji_motion"] = emojis_data[0]["motion"]
                     scene["emojis"] = emojis_data
-                    scene["fx_flags"] = fx
+
+            # Encode 2D Camera Motion flag into fx_flags bit 12 (0x1000)
+            fx = scene.get("fx_flags", 0)
+            if self.camera_motion == "2d":
+                fx |= 0x1000
+            else:
+                fx &= ~0x1000
+            scene["fx_flags"] = fx
+            scene["camera_motion"] = self.camera_motion
         except Exception as e:
             print(f"[Director] Expressive emoji error: {e}")
 

@@ -448,6 +448,20 @@
             </select>
         </div>
 
+        <div class="form-group" id="camera-motion-group">
+            <label>Camera Motion Dimension (Expressive++)</label>
+            <div class="logo-toggle">
+                <div class="logo-option">
+                    <input type="radio" name="cameraMotion" id="cam-1d" value="1d">
+                    <label for="cam-1d">↔ 1D (X-Axis Sweep)</label>
+                </div>
+                <div class="logo-option">
+                    <input type="radio" name="cameraMotion" id="cam-2d" value="2d" checked>
+                    <label for="cam-2d">✦ 2D (XY Open Canvas)</label>
+                </div>
+            </div>
+        </div>
+
         <div class="form-group">
             <label>Startup Logo</label>
             <div class="logo-toggle">
@@ -674,6 +688,7 @@
             sp_dc: spDcEl ? spDcEl.value.trim() : '',
             syncOffset: currentSyncOffset,
             captionMode: document.getElementById('caption-mode-select').value,
+            cameraMotion: document.querySelector('input[name="cameraMotion"]:checked')?.value || '2d',
             logo: document.querySelector('input[name="logo"]:checked').value,
             uiScale: document.getElementById('ui-scale').value,
             font: document.getElementById('font-select').value,
@@ -724,6 +739,10 @@
                 if (s.captionMode) {
                     const el = document.getElementById('caption-mode-select');
                     if (el) el.value = s.captionMode;
+                }
+                if (s.cameraMotion) {
+                    const el = document.querySelector(`input[name="cameraMotion"][value="${s.cameraMotion}"]`);
+                    if (el) el.checked = true;
                 }
                 if (s.font) {
                     const el = document.getElementById('font-select');
@@ -817,6 +836,14 @@
             } else {
                 logoPreview.textContent = '♫';
             }
+            saveSettings();
+        });
+    });
+
+    // Camera Motion Toggle Auto-Save
+    document.querySelectorAll('input[name="cameraMotion"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            saveSettings();
         });
     });
     // ==========================================
@@ -943,9 +970,11 @@
 
             const totalSceneW = textMaxW + (emojiCount === 2 ? 80 : (emojiCount === 1 ? 55 : 20));
 
-            // Virtual Camera Panning Engine
+            // Virtual Camera 2D Engine (1D Horizontal vs 2D Open Canvas)
+            const is2D = (currentSceneData.camera_motion === '2d') || ((currentSceneData.fx_flags & 0x1000) !== 0);
             const availW = w - 40;
             let cameraX = 0;
+            let cameraY = 0;
             const progress = Math.min(1.0, sceneAge / ((currentSceneData.duration_ms || 2500) / 1000));
 
             if (totalSceneW > availW) {
@@ -960,8 +989,19 @@
                 cameraX = maxScroll * panProgress;
             }
 
+            if (is2D) {
+                // 2D Cinematic Camera Glide & Swoop across XY Open Canvas
+                if (metaphor === 'flying') {
+                    cameraY = (progress - 0.5) * -16;
+                } else if (metaphor === 'falling') {
+                    cameraY = (progress - 0.5) * 16;
+                } else {
+                    cameraY = Math.sin(progress * Math.PI) * 9;
+                }
+            }
+
             ctx.save();
-            ctx.translate(-cameraX, 0);
+            ctx.translate(-cameraX, -cameraY);
 
             // Draw Prefix
             if (prefix && comp !== 'MONOLITH') {
@@ -1037,13 +1077,22 @@
             for (let i = 0; i < emojiCount; i++) {
                 const em = emojis[i];
                 let emojiX = 0;
+                let emojiY = 0;
+
                 if (emojiCount === 2) {
-                    emojiX = (i === 0) ? (-textMaxW / 2 - 28) : (textMaxW / 2 + 28);
+                    if (is2D) {
+                        // Dynamic 2D Diagonal Placement
+                        emojiX = (i === 0) ? (-textMaxW / 2 - 28) : (textMaxW / 2 + 28);
+                        emojiY = (i === 0) ? -14 : 14;
+                    } else {
+                        emojiX = (i === 0) ? (-textMaxW / 2 - 28) : (textMaxW / 2 + 28);
+                        emojiY = 0;
+                    }
                 } else {
                     emojiX = (textMaxW / 2 + 28);
+                    emojiY = 0;
                 }
 
-                let emojiY = 0;
                 let scale = 1.0;
                 const mType = em.motion || 0;
 
@@ -1061,6 +1110,9 @@
                     if (progress < 0.35) {
                         scale = Math.max(0.2, Math.sin((progress / 0.35) * Math.PI * 0.5) * 1.25);
                     }
+                } else if (mType === 5) { // EYES_SCAN: Watchful horizontal glance scanning
+                    emojiX += Math.sin(now * 0.005) * 5.0;
+                    emojiY += Math.sin(now * 0.002) * 1.5;
                 } else { // FLOAT
                     emojiY += Math.sin(now * 0.006) * 3.0;
                 }

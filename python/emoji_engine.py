@@ -11,6 +11,7 @@ MOTION_HEARTBEAT = 1   # Authentic lub-dub double-beat scale pulse (hearts, roma
 MOTION_FIRE = 2        # Chaotic high-frequency jitter/flicker (fire, lightning, hype, energy)
 MOTION_DANCE = 3       # Rhythmic horizontal & vertical rock/sway (party, dancing, instruments)
 MOTION_POP = 4         # Elastic pop entrance (footwear, rockets, explosions, pops)
+MOTION_EYES_SCAN = 5   # Horizontal watchful scanning side-to-side (eyes, glance, gaze)
 
 EMOJI_MOTION_MAP = {
     "❤️": MOTION_HEARTBEAT,
@@ -36,6 +37,8 @@ EMOJI_MOTION_MAP = {
     "💣": MOTION_POP,
     "🎉": MOTION_POP,
     "🍾": MOTION_POP,
+    "👀": MOTION_EYES_SCAN,
+    "👁️": MOTION_EYES_SCAN,
 }
 
 def get_motion_for_emoji(emoji):
@@ -301,9 +304,21 @@ SEMANTIC_LEXICON = [
     ("🔮", ["destiny", "fate", "fortune", "future", "prophecy"]),
     ("❓", ["know", "happened", "question", "how", "why"]),
 
-    # 11. Nature, Weather & Water
-    ("🌊", ["wave", "waves", "ocean", "sea", "tide", "tides", "surf", "drown", "deep", "river", "shore", "beach"]),
-    ("☀️", ["sun", "sunny", "sunshine", "daylight", "bright", "golden", "summer", "warmth"]),
+    # 11. Nature, Flora, Weather & Geography
+    ("🌲", ["tree", "trees", "pine", "forest", "woods", "timber", "evergreen", "spruce"]),
+    ("🌳", ["oak", "branches", "grove", "canopy", "leaves"]),
+    ("🌴", ["palm", "palms", "tropical", "island", "coconut"]),
+    ("🌱", ["grow", "growing", "grown", "sprout", "plant", "plants", "roots", "seed", "green"]),
+    ("🌍", ["earth", "world", "globe", "planet", "continents", "worldwide", "global"]),
+    ("🗺️", ["map", "country", "countries", "border", "borders", "land", "miles", "journey", "compass", "navigation"]),
+    ("🏔️", ["mountain", "mountains", "peak", "summit", "climb", "climbing", "rocky", "hills", "valley", "canyon"]),
+    ("🏙️", ["city", "cities", "town", "skyline", "buildings", "downtown", "streets", "york", "tokyo", "paris", "london"]),
+    ("🌺", ["flower", "flowers", "cherry", "blossom", "blossoms", "bloom", "blooming"]),
+    ("🍁", ["autumn", "fall", "leaf", "foliage"]),
+    ("🦋", ["butterfly", "butterflies", "cocoon"]),
+    ("🌊", ["wave", "waves", "ocean", "sea", "tide", "tides", "surf", "drown", "deep", "river", "shore", "beach", "water"]),
+    ("☀️", ["sun", "sunny", "sunshine", "daylight", "bright", "golden", "summer", "warmth", "dawn", "sunrise"]),
+    ("🌅", ["sunset", "dusk", "evening", "horizon"]),
 
     # 12. Speed, Driving, Travel & Escape
     ("🏎️", ["race", "racing", "speed", "fast", "ferrari", "porsche", "drift", "engine"]),
@@ -331,8 +346,8 @@ DISAMBIGUATION_BLACKLIST = {
     "bag": "💰",
 }
 
-# High-contrast 1-bit vetted fallback palette
-FALLBACK_PALETTE = ["✨", "🎵", "⭐", "⚡", "❤️", "🌙", "🎶", "🕊️"]
+# High-contrast 1-bit vetted fallback palette (NO generic music notes - music only plays when singing/instruments mentioned!)
+FALLBACK_PALETTE = ["✨", "🌟", "💫", "💭", "⭐", "❤️", "🌙", "🕊️"]
 
 def analyze_lyric_multi_emoji(line_text, focal_word=""):
     """

@@ -22,6 +22,7 @@ sketchbook = SketchbookEngine()
 
 CURRENT_SETTINGS = {
     'captionMode': 'expressive',
+    'cameraMotion': '2d',
     'font': 'animated',
     'companion': 'cat',
     'logo': 'music',
@@ -332,6 +333,7 @@ async def main():
                     last_sent_text = "" 
 
                 # Send mode updates if changed
+                director.set_camera_motion(CURRENT_SETTINGS.get('cameraMotion', '2d'))
                 current_mode = CURRENT_SETTINGS.get('captionMode', 'expressive')
                 if current_mode != last_sent_mode:
                     if current_mode in ['expressive', 'expressive++']:
