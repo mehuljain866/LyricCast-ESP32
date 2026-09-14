@@ -355,7 +355,8 @@ async def main():
                     current_lyric_time = 0
                     next_lyric_time = dur_ms / 1000.0
                     
-                    position_s = (pos_ms / 1000.0) + SYNC_OFFSET_SECONDS
+                    offset_s = float(CURRENT_SETTINGS.get('syncOffset', 0.20))
+                    position_s = (pos_ms / 1000.0) + offset_s
                     for i in range(len(lyrics)):
                         if position_s >= lyrics[i]['time']:
                             current_lyric = lyrics[i]['text']

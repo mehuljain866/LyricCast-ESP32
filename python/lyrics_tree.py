@@ -7,6 +7,7 @@ Implements a robust multi-tier fallback architecture:
 4. Multi-provider syncedlyrics (NetEase, Megalobiz, Genius fallback)
 """
 
+import os
 import urllib.request
 import urllib.parse
 import json
@@ -19,6 +20,33 @@ class SpotifyLyricsTree:
     def __init__(self):
         self.cached_spotify_token = None
         self.spotify_token_expires = 0
+        self.detected_sp_dc = None
+
+    def auto_detect_sp_dc(self):
+        if self.detected_sp_dc:
+            return self.detected_sp_dc
+        try:
+            import browser_cookie3
+            loaders = [
+                browser_cookie3.chrome,
+                browser_cookie3.edge,
+                browser_cookie3.brave,
+                browser_cookie3.firefox,
+                browser_cookie3.opera
+            ]
+            for loader in loaders:
+                try:
+                    cj = loader(domain_name="spotify.com")
+                    for c in cj:
+                        if c.name == "sp_dc" and c.value:
+                            print(f"[Spotify Tree] Auto-detected sp_dc cookie from {loader.__name__}!")
+                            self.detected_sp_dc = c.value
+                            return self.detected_sp_dc
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return None
 
     def get_spotify_web_token(self, sp_dc):
         import time
@@ -162,14 +190,29 @@ class SpotifyLyricsTree:
     def get_lyrics(self, title, artist, album=None, duration_s=None, sp_dc=None):
         """
         Cascades through the tree:
-        1. Official Spotify (if sp_dc provided)
+        0. Local Override (lyrics/ folder)
+        1. Official Spotify (auto-detected from browser or configured)
         2. LRCLIB Exact Master Match (album + duration)
         3. LRCLIB Duration-Ranked Search
         4. Multi-Provider Syncedlyrics
         """
-        # Tier 1: Official Spotify
-        if sp_dc:
-            lrc = self.fetch_spotify_official(sp_dc, title, artist)
+        # Tier 0: Local custom .lrc file in lyrics/ folder
+        local_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "lyrics"))
+        if os.path.exists(local_dir):
+            for fname in [f"{title}.lrc", f"{artist} - {title}.lrc", f"{title} - {artist}.lrc"]:
+                fpath = os.path.join(local_dir, fname)
+                if os.path.exists(fpath):
+                    try:
+                        with open(fpath, "r", encoding="utf-8") as f:
+                            print(f"[Spotify Tree] [Tier 0: Local Override] Loaded {fname}!")
+                            return f.read()
+                    except Exception:
+                        pass
+
+        # Tier 1: Official Spotify (Auto-detected from browser or user input)
+        active_sp_dc = sp_dc or self.auto_detect_sp_dc()
+        if active_sp_dc:
+            lrc = self.fetch_spotify_official(active_sp_dc, title, artist)
             if lrc:
                 return lrc
 

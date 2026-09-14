@@ -517,6 +517,21 @@
             </select>
         </div>
 
+        <div class="form-group" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-top: 15px;">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                <span>⏱️ Live Sync Fine-Tuner</span>
+                <span id="sync-offset-label" style="font-weight: bold; color: #ffcc00;">+0.20s</span>
+            </label>
+            <div style="font-size: 0.75rem; color: #718096; margin-bottom: 10px;">If intro silence is slightly ahead or behind on a particular song, nudge in real-time:</div>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="nudgeSync(-1.0)">⏪ -1.0s</button>
+                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="nudgeSync(-0.25)">◀ -0.25s</button>
+                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.8rem; background: #4a5568;" onclick="resetSync()">Reset</button>
+                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="nudgeSync(0.25)">+0.25s ▶</button>
+                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.8rem;" onclick="nudgeSync(1.0)">+1.0s ⏩</button>
+            </div>
+        </div>
+
         <button class="btn" onclick="saveSettings()">Save Display Settings</button>
     </div>
 
@@ -625,6 +640,28 @@
         document.getElementById(tabId).classList.add('active');
     }
 
+    let currentSyncOffset = 0.20;
+
+    function updateSyncLabel() {
+        const lbl = document.getElementById('sync-offset-label');
+        if (lbl) {
+            const sign = currentSyncOffset >= 0 ? '+' : '';
+            lbl.textContent = `${sign}${currentSyncOffset.toFixed(2)}s`;
+        }
+    }
+
+    async function nudgeSync(delta) {
+        currentSyncOffset = Math.round((currentSyncOffset + delta) * 100) / 100;
+        updateSyncLabel();
+        await saveSettings();
+    }
+
+    async function resetSync() {
+        currentSyncOffset = 0.20;
+        updateSyncLabel();
+        await saveSettings();
+    }
+
     // HTTP API Integration
     async function saveSettings() {
         const autoRunEl = document.getElementById('auto-run-boot');
@@ -634,6 +671,7 @@
             genreAdaptiveFonts: document.getElementById('genre-adaptive-fonts').checked,
             autoRunBoot: autoRunEl ? autoRunEl.checked : false,
             sp_dc: spDcEl ? spDcEl.value.trim() : '',
+            syncOffset: currentSyncOffset,
             captionMode: document.getElementById('caption-mode-select').value,
             logo: document.querySelector('input[name="logo"]:checked').value,
             uiScale: document.getElementById('ui-scale').value,
@@ -669,6 +707,10 @@
                 if (s.sp_dc !== undefined) {
                     const el = document.getElementById('spotify-sp-dc');
                     if (el) el.value = s.sp_dc;
+                }
+                if (s.syncOffset !== undefined) {
+                    currentSyncOffset = parseFloat(s.syncOffset);
+                    updateSyncLabel();
                 }
                 if (s.genreAdaptiveFonts !== undefined) {
                     const el = document.getElementById('genre-adaptive-fonts');
