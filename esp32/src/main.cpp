@@ -1247,73 +1247,19 @@ void drawParticles() {
 }
 
 // ==========================================
-// KINETIC EMOJI MOTION ENGINE (Expressive++ Mode)
-// Motion Types:
-// 0: BOUNCE  (Energetic bobbing + elastic entrance pop)
-// 1: FLOAT   (Dreamy sinusoidal drift & wave)
-// 2: PULSE   (Heartbeat rhythmic double-throb)
-// 3: WIGGLE  (High-energy rapid tremor/shiver)
-// 4: SPARKLE (Subtle drift with orbiting micro-sparkles)
 // ==========================================
-void drawKineticEmoji(const uint8_t* bitmap, int anchorX, int anchorY, float progress, unsigned long now, int motionType) {
+// KINETIC EMOJI MOTION ENGINE (Expressive++ Mode)
+// Smooth, organic vertical wiggle / bobbing up and down
+// ==========================================
+void drawKineticEmoji(const uint8_t* bitmap, int anchorX, int anchorY, float progress, unsigned long now) {
   if (!bitmap) return;
   
-  // 1. Elastic Pop Entrance (0.0 to 0.35 of line duration)
-  int enterOffsetY = 0;
-  if (progress < 0.35f) {
-    float t = progress / 0.35f;
-    float easeT = easeOutBack(t);
-    enterOffsetY = (int)(14.0f * (1.0f - min(1.15f, easeT)));
-  }
+  // Smooth, gentle vertical wiggle / bobbing (natural breathing frequency)
+  int bobY = (int)(sin(now * 0.007f) * 2.5f);
+  int drawY = anchorY + bobY;
 
-  // 2. Dynamic Kinetic Motion Offsets
-  int mx = 0;
-  int my = enterOffsetY;
-
-  if (motionType == 1) {
-    // FLOAT: Dreamy floating wave & horizontal drift
-    mx += (int)(sin(now * 0.003f) * 2.5f);
-    my += (int)(cos(now * 0.004f) * 2.0f);
-  } else if (motionType == 2) {
-    // PULSE: Rhythmic double-throb heartbeat
-    unsigned long beatCycle = now % 700;
-    if (beatCycle < 140) {
-      my -= 2;
-    } else if (beatCycle >= 180 && beatCycle < 300) {
-      my -= 1;
-    }
-  } else if (motionType == 3) {
-    // WIGGLE: High energy rapid tremor
-    mx += (int)(sin(now * 0.038f) * 2.2f);
-    my += (int)(cos(now * 0.028f) * 1.2f);
-  } else if (motionType == 4) {
-    // SPARKLE: Subtle drift with orbiting micro-sparkles
-    mx += (int)(sin(now * 0.002f) * 1.5f);
-    my += (int)(cos(now * 0.003f) * 1.5f);
-    
-    // Orbiting sparkle star
-    float ang = (float)(now % 1000) / 1000.0f * 6.28318f;
-    int sx = anchorX + 8 + (int)(cos(ang) * 11.0f);
-    int sy = anchorY + my + 8 + (int)(sin(ang) * 9.0f);
-    if (sx >= 0 && sx <= 126 && sy >= 2 && sy <= 45) {
-      display.drawPixel(sx, sy, SSD1306_WHITE);
-      if ((now / 120) % 2 == 0) {
-        display.drawPixel(sx + 1, sy, SSD1306_WHITE);
-        display.drawPixel(sx - 1, sy, SSD1306_WHITE);
-        display.drawPixel(sx, sy + 1, SSD1306_WHITE);
-        display.drawPixel(sx, sy - 1, SSD1306_WHITE);
-      }
-    }
-  } else {
-    // Default 0: BOUNCE: Rhythmic energetic bobbing
-    my += (int)(sin(now * 0.008f) * 2.5f);
-  }
-
-  int finalX = constrain(anchorX + mx, 1, 111);
-  int finalY = anchorY + my;
-
-  if (finalY >= -15 && finalY <= 46) {
-    display.drawBitmap(finalX, finalY, bitmap, 16, 16, SSD1306_WHITE);
+  if (drawY >= -15 && drawY <= 46) {
+    display.drawBitmap(anchorX, drawY, bitmap, 16, 16, SSD1306_WHITE);
   }
 }
 
@@ -1324,7 +1270,8 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
   if (s.focalWord.length() == 0 && s.prefix.length() == 0 && s.suffix.length() == 0) return;
 
   int minX = 2;
-  int availWidth = 124;
+  int availWidth = s.hasBitmap ? 104 : 124;
+  int maxX = s.hasBitmap ? 106 : 126;
 
   bool hasPrefix = (s.prefix.length() > 0);
   bool hasFocal = (s.focalWord.length() > 0);
@@ -1410,22 +1357,18 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       }
     }
     int fx = minX + (availWidth - (int)fw) / 2;
-    if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
+    if (fx + fw > maxX) fx = max(minX, maxX - (int)fw);
     if (fx < minX) fx = minX;
     int fy = 29 + yOffset + (int)breathe;
     if (fy >= -10 && fy <= 55) {
       drawProgressiveText(s.focalWord, fx, fy, focalFont, progress);
       if (s.underline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, progress);
-      if (s.doodle != "NONE") {
-        if (s.hasBitmap) {
-          int anchorX = (fx + fw + 18 <= 126) ? (fx + fw + 4) : 108;
-          int anchorY = (fx + fw + 18 <= 126) ? (fy - 10) : (2 + yOffset);
-          int motionType = (s.fxFlags >> 1) & 0x07;
-          drawKineticEmoji(s.bitmapData, anchorX, anchorY, progress, now, motionType);
-        } else if (fx + fw + 14 <= 126) {
-          drawDoodle(s.doodle, min(120, fx + fw + 8), fy - 6, progress, now);
-        }
+      if (s.doodle != "NONE" && !s.hasBitmap && fx + fw + 14 <= maxX) {
+        drawDoodle(s.doodle, min(maxX - 6, fx + fw + 8), fy - 6, progress, now);
       }
+    }
+    if (s.hasBitmap) {
+      drawKineticEmoji(s.bitmapData, 110, 16 + yOffset, progress, now);
     }
     return;
   }
@@ -1448,7 +1391,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       }
     }
     int px = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
-    if (px + pw > 126) px = max(minX, 126 - (int)pw);
+    if (px + pw > maxX) px = max(minX, maxX - (int)pw);
     if (px < minX) px = minX;
     drawProgressiveText(s.prefix, px, prefixY, prefixFont, progress);
   }
@@ -1471,7 +1414,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       }
     }
     int fx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2;
-    if (fx + fw > 126) fx = max(minX, 126 - (int)fw);
+    if (fx + fw > maxX) fx = max(minX, maxX - (int)fw);
     if (fx < minX) fx = minX;
 
     if (s.fxFlags & 1) {
@@ -1480,7 +1423,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       else { bx = fx; by = focalY - 8; bw = fw; bh = 9; }
       int rx = max(0, bx - 3);
       int ry = max(0, by - 1);
-      int rw = min(128 - rx, bw + 6);
+      int rw = min(maxX - rx, bw + 6);
       int rh = min(47 - ry, bh + 3);
       if (hasPrefix && ry < prefixY + 2) ry = prefixY + 2;
       if (hasSuffix && ry + rh > suffixY - 8) rh = max(6, (suffixY - 8) - ry);
@@ -1496,40 +1439,24 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
 
     if (s.underline && !(s.fxFlags & 1)) {
       int ux1 = max(minX, fx - 2);
-      int ux2 = min(126, fx + (int)fw + 2);
+      int ux2 = min(maxX, fx + (int)fw + 2);
       drawProgressiveUnderline(ux1, ux2, min(45, focalY + 3), progress);
     }
 
     if (s.doodle == "CIRCLE") {
       drawProgressiveCircle(fx + fw/2, focalY - fh/2, min(24, (int)fw/2 + 4), min(12, (int)fh/2 + 3), progress);
     } else if (s.doodle == "BOX") {
-      int bx1 = max(minX, fx - 4), bx2 = min(126, fx + (int)fw + 4);
+      int bx1 = max(minX, fx - 4), bx2 = min(maxX, fx + (int)fw + 4);
       drawProgressiveBox(bx1, max(1, focalY - (int)fh - 1), bx2, min(45, focalY + 3), progress);
     } else if (s.doodle == "BUBBLE") {
       drawProgressiveBubble(fx + fw/2, focalY - fh/2, min(26, (int)fw/2 + 6), min(14, (int)fh/2 + 4), progress);
     } else if (s.doodle == "WAVE") {
       drawProgressiveWave(minX, minX + availWidth, 44 + yOffset, progress, now);
-    } else if (s.doodle != "NONE" && s.doodle != "UNDERLINE") {
-      if (s.hasBitmap) {
-        int anchorX, anchorY;
-        if (fx + fw + 18 <= 126) {
-          anchorX = fx + fw + 4;
-          anchorY = focalY - 8;
-        } else if (fx - 18 >= minX) {
-          anchorX = fx - 18;
-          anchorY = focalY - 8;
-        } else {
-          anchorX = fx + (fw - 16) / 2;
-          anchorY = hasPrefix ? (focalY + 3) : max(2, focalY - fh - 8);
-        }
-        int motionType = (s.fxFlags >> 1) & 0x07;
-        drawKineticEmoji(s.bitmapData, anchorX, anchorY, progress, now, motionType);
-      } else {
-        int dx = fx + fw + 6;
-        int dy = focalY - 5;
-        if (dx + 12 > 126) dx = max(4, fx - 14);
-        drawDoodle(s.doodle, dx, dy, progress, now);
-      }
+    } else if (s.doodle != "NONE" && s.doodle != "UNDERLINE" && !s.hasBitmap) {
+      int dx = fx + fw + 6;
+      int dy = focalY - 5;
+      if (dx + 12 > maxX) dx = max(minX, fx - 14);
+      drawDoodle(s.doodle, dx, dy, progress, now);
     }
   }
 
@@ -1551,17 +1478,14 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       }
     }
     int sx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
-    if (sx + sw > 126) sx = max(minX, 126 - (int)sw);
+    if (sx + sw > maxX) sx = max(minX, maxX - (int)sw);
     if (sx < minX) sx = minX;
     drawProgressiveText(s.suffix, sx, suffixY, suffixFont, progress);
   }
 
-  // 5. Headless / focal-less fallback with bitmap
-  if (!hasFocal && s.hasBitmap) {
-    int motionType = (s.fxFlags >> 1) & 0x07;
-    int anchorX = 108;
-    int anchorY = hasPrefix ? (prefixY + 4) : (14 + yOffset);
-    drawKineticEmoji(s.bitmapData, anchorX, anchorY, progress, now, motionType);
+  // Render Expressive++ Kinetic Emoji in dedicated column with zero text overlap
+  if (s.hasBitmap) {
+    drawKineticEmoji(s.bitmapData, 110, 16 + yOffset, progress, now);
   }
 }
 

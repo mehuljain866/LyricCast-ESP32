@@ -1029,37 +1029,11 @@
                 ctx.stroke();
             }
 
-            // Expressive++ Kinetic Unicode Emoji Render
+            // Expressive++ Kinetic Unicode Emoji Render (Dedicated Column, Zero Overlap)
             if (currentSceneData.emoji) {
-                const motionType = currentSceneData.emoji_motion !== undefined ? currentSceneData.emoji_motion : ((currentSceneData.fx_flags >> 1) & 0x07);
-                let mx = 0, my = 0;
-                if (motionType === 1) {
-                    // FLOAT: Dreamy drift
-                    mx = Math.sin(now * 0.003) * 3.0;
-                    my = Math.cos(now * 0.004) * 2.5;
-                } else if (motionType === 2) {
-                    // PULSE: Heartbeat throb
-                    const beat = now % 700;
-                    my = (beat < 140) ? -3.0 : ((beat >= 180 && beat < 300) ? -1.5 : 0);
-                } else if (motionType === 3) {
-                    // WIGGLE: High energy rapid tremor
-                    mx = Math.sin(now * 0.038) * 3.0;
-                    my = Math.cos(now * 0.028) * 1.5;
-                } else if (motionType === 4) {
-                    // SPARKLE: Shimmering drift
-                    mx = Math.sin(now * 0.002) * 2.0;
-                    my = Math.cos(now * 0.003) * 2.0;
-                } else {
-                    // Default BOUNCE: Energetic bobbing
-                    my = Math.sin(now * 0.008) * 3.0;
-                }
-
-                let emojiX = focalWidth / 2 + 18 + mx;
-                let emojiY = -4 + my;
-                if (focalWidth > 60) {
-                    emojiX = mx;
-                    emojiY = -22 + my;
-                }
+                const bobY = Math.sin(now * 0.007) * 3.0;
+                const emojiX = (w / 2) - 20;
+                const emojiY = bobY;
 
                 ctx.font = '22px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
                 ctx.textAlign = 'center';

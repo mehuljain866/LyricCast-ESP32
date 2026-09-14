@@ -343,9 +343,6 @@ class LyricDirector:
                     scene["emoji"] = emoji
                     scene["emoji_motion"] = motion_type
                     scene["doodle"] = f"BMP:{hex_str}"
-                    # Encode motion_type into bits 1..3 of fx_flags
-                    curr_fx = scene.get("fx_flags", 0) & 1
-                    scene["fx_flags"] = curr_fx | ((motion_type & 0x07) << 1)
         except Exception as e:
             print(f"[Director] Expressive emoji error: {e}")
 
