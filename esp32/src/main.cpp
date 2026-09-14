@@ -618,11 +618,45 @@ void drawProgressiveBalloon(int cx, int cy, float progress) {
 
 void drawProgressiveBell(int cx, int cy, float progress) {
   if (progress <= 0.0f) return;
-  display.drawLine(cx - 4, cy + 2, cx + 4, cy + 2, SSD1306_WHITE);
-  display.drawLine(cx - 4, cy + 2, cx - 2, cy - 3, SSD1306_WHITE);
-  display.drawLine(cx + 4, cy + 2, cx + 2, cy - 3, SSD1306_WHITE);
-  display.drawLine(cx - 2, cy - 3, cx + 2, cy - 3, SSD1306_WHITE);
-  display.drawPixel(cx, cy + 3, SSD1306_WHITE);
+  // 1. Top ring / loop handle
+  display.drawCircle(cx, cy - 6, 1, SSD1306_WHITE);
+  display.drawPixel(cx, cy - 7, SSD1306_WHITE);
+
+  // 2. Bell dome body (curved crown)
+  display.drawFastHLine(cx - 2, cy - 5, 5, SSD1306_WHITE);
+  display.drawLine(cx - 2, cy - 5, cx - 3, cy - 2, SSD1306_WHITE);
+  display.drawLine(cx + 2, cy - 5, cx + 3, cy - 2, SSD1306_WHITE);
+
+  // 3. Flared bell waist & bottom rim lip
+  display.drawLine(cx - 3, cy - 2, cx - 5, cy + 2, SSD1306_WHITE);
+  display.drawLine(cx + 3, cy - 2, cx + 5, cy + 2, SSD1306_WHITE);
+  display.drawFastHLine(cx - 6, cy + 2, 13, SSD1306_WHITE);
+  display.drawFastHLine(cx - 5, cy + 3, 11, SSD1306_WHITE);
+
+  // 4. Clapper striker ball
+  if (progress >= 0.25f) {
+    display.fillCircle(cx, cy + 5, 1, SSD1306_WHITE);
+  }
+
+  // 5. Sound / vibration ringing arcs (🔔 emoji vibration lines)
+  if (progress >= 0.55f) {
+    display.drawPixel(cx - 8, cy - 2, SSD1306_WHITE);
+    display.drawPixel(cx - 9, cy, SSD1306_WHITE);
+    display.drawPixel(cx - 8, cy + 2, SSD1306_WHITE);
+
+    display.drawPixel(cx + 8, cy - 2, SSD1306_WHITE);
+    display.drawPixel(cx + 9, cy, SSD1306_WHITE);
+    display.drawPixel(cx + 8, cy + 2, SSD1306_WHITE);
+  }
+  if (progress >= 0.85f) {
+    display.drawPixel(cx - 11, cy - 3, SSD1306_WHITE);
+    display.drawPixel(cx - 12, cy, SSD1306_WHITE);
+    display.drawPixel(cx - 11, cy + 3, SSD1306_WHITE);
+
+    display.drawPixel(cx + 11, cy - 3, SSD1306_WHITE);
+    display.drawPixel(cx + 12, cy, SSD1306_WHITE);
+    display.drawPixel(cx + 11, cy + 3, SSD1306_WHITE);
+  }
 }
 
 void drawProgressiveGift(int cx, int cy, float progress) {

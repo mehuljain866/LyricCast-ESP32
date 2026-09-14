@@ -998,6 +998,34 @@
                 ctx.moveTo(cx, cy - 3); ctx.lineTo(cx, cy + 2);
                 ctx.moveTo(cx - 2, cy - 1); ctx.lineTo(cx + 2, cy - 1);
                 ctx.stroke();
+            } else if (doodle === 'bell') {
+                ctx.strokeStyle = '#ffcc00';
+                ctx.fillStyle = '#ffcc00';
+                ctx.lineWidth = 1.5;
+                const cx = focalWidth / 2 + 18, cy = -6;
+                // Top loop handle
+                ctx.beginPath();
+                ctx.arc(cx, cy - 6, 1.5, 0, Math.PI * 2);
+                ctx.stroke();
+                // Flared bell dome body
+                ctx.beginPath();
+                ctx.moveTo(cx - 2, cy - 4);
+                ctx.lineTo(cx + 2, cy - 4);
+                ctx.quadraticCurveTo(cx + 3, cy - 1, cx + 6, cy + 3);
+                ctx.lineTo(cx - 6, cy + 3);
+                ctx.quadraticCurveTo(cx - 3, cy - 1, cx - 2, cy - 4);
+                ctx.stroke();
+                // Clapper striker
+                ctx.beginPath();
+                ctx.arc(cx, cy + 5, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                // Ringing vibration sound waves
+                ctx.beginPath();
+                ctx.arc(cx - 8, cy, 3, -0.7, 0.7);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(cx + 8, cy, 3, Math.PI - 0.7, Math.PI + 0.7);
+                ctx.stroke();
             }
         }
 
