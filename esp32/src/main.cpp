@@ -1453,6 +1453,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
 
   // 2. Measure natural, uncompromised widths
   int16_t x1, y1;
+  int16_t fx1 = 0, fy1 = 0;
   uint16_t pw = 0, ph = 0, fw = 0, fh = 0, sw = 0, sh = 0;
   if (hasPrefix) {
     display.setFont(getFontByChoice(prefixFont));
@@ -1460,7 +1461,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
   }
   if (hasFocal) {
     display.setFont(getFontByChoice(focalFont));
-    display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
+    display.getTextBounds(s.focalWord, 0, 0, &fx1, &fy1, &fw, &fh);
   }
   if (hasSuffix) {
     display.setFont(getFontByChoice(suffixFont));
@@ -1559,10 +1560,23 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
   if (hasFocal && effFocalY >= -10 && effFocalY <= 55) {
     int fx = textStartX + (comp == "STACKED" ? 0 : (textMaxW - (int)fw) / 2) - cameraX;
     if (s.fxFlags & 1) {
-      int rx = max(0, fx - 3);
-      int ry = max(0, effFocalY - (int)fh - 1);
-      int rw = (int)fw + 6;
-      int rh = (int)fh + 4;
+      int rx = max(0, fx + (int)fx1 - 2);
+      int ry = effFocalY + (int)fy1; // Exactly the top of the focal glyphs
+      int rw = (int)fw + 4;
+      int rh = (int)fh;              // Exactly the height of the focal glyphs
+      if (getFontByChoice(focalFont) == NULL) {
+        ry = effFocalY - 7;
+        rh = 8;
+      }
+      // Guarantee highlight never invades or overlaps the prefix line above
+      if (hasPrefix && effPrefixY >= -10) {
+        int safeTop = effPrefixY + 3;
+        if (ry < safeTop) {
+          int diff = safeTop - ry;
+          ry = safeTop;
+          rh = (rh > diff) ? (rh - diff) : 4;
+        }
+      }
       display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
       display.setTextColor(SSD1306_BLACK);
       drawProgressiveText(s.focalWord, fx, effFocalY, focalFont, progress);

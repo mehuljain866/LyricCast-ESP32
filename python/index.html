@@ -1041,11 +1041,16 @@
             ctx.textAlign = (comp === 'STACKED') ? 'left' : 'center';
             const fx = (comp === 'STACKED') ? -textMaxW / 2 : 0;
 
-            // Inverted Badge FX
+            // Inverted Badge FX (Kept strictly to text height, never encroaching on line above)
             if (currentSceneData.fx_flags & 1) {
                 ctx.fillStyle = '#00e5ff';
-                const bx = (comp === 'STACKED') ? fx - 4 : -focalWidth / 2 - 6;
-                ctx.fillRect(bx, -16, focalWidth + 12, 24);
+                const metrics = ctx.measureText(focal);
+                const ascent = metrics.actualBoundingBoxAscent || 11;
+                const descent = metrics.actualBoundingBoxDescent || 3;
+                const by = 2 - ascent;
+                const bh = ascent + descent + 1;
+                const bx = (comp === 'STACKED') ? fx - 3 : -focalWidth / 2 - 4;
+                ctx.fillRect(bx, by, focalWidth + 8, bh);
                 ctx.fillStyle = '#0a0d14';
             }
 
