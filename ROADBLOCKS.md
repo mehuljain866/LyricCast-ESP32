@@ -143,5 +143,34 @@
 * **The Root Cause:** Hardware limitation of standard 0.96" I2C OLED displays.
 * **The Solution:**
   - Implemented **Spatial 4×4 Bayer Ordered Dithering**: by mapping pixel activation probability through a 4×4 threshold matrix, the human eye perceives soft spatial grayscale gradients.
-  - Added an ambient 3-row dithering floor gradient (`y=45..47`) directly separating the Blue lyric canvas from the Yellow status bar, creating an ambient floor glow.
   - Added an animated `PARTICLE_GRADIENT` wave mode that produces shifting, ethereal aurora mist across the display canvas.
+
+---
+
+### Roadblock 6.3: Dotted Line Visual Artifact on Physical OLED Displays
+* **The Symptom:** An ambient 3-row dithering floor gradient (`y=45..47`) intended to create a soft floor glow appeared on the physical 0.96" OLED screen as an unnatural, distracting dotted line separating the blue and yellow zones.
+* **The Root Cause:** At standard viewing distances, 128×64 pixels on a small 0.96" diagonal display are large enough that isolated single-pixel stipples in ordered dithering resolve as discrete dots rather than a seamless blended gradient.
+* **The Solution:** Completely eliminated the static boundary dithering line (`drawExpressiveHorizonGradient()`) from firmware and simulator, keeping the canvas boundary crisp, clean, and distraction-free.
+
+---
+
+### Roadblock 6.4: Out-of-Context Emoji Triggering & Static Placement
+* **The Symptom:** Emojis were triggered inappropriately (e.g., words like *"fast"* triggering a fast-food hamburger 🍔, *"play"* triggering a video game controller 🎮, *"class"* triggering a basketball 🏀), lyrics often lacked emojis when lines didn't contain concrete nouns, and rendered emojis were completely static and placed at a rigid coordinate that clipped on long words.
+* **The Root Cause:** 
+  1. Primitive dictionary used naive single-word substring matching with no lyrical context awareness.
+  2. No support for multi-word idioms (e.g., *"shut up and dance"*, *"broken heart"*, *"on fire"*).
+  3. No kinetic motion choreography; bitmaps were rendered as static stamps.
+* **The Solution:**
+  - Built a 5-layer **Context-Aware Semantic Emoji Engine (`emoji_engine.py`)**:
+    - **Layer 1: Multi-Word Lyrical Idioms** (hundreds of song expressions matched with top priority).
+    - **Layer 2: Hero Focal Word Semantic Direct Match** (reinforcing the director's focal word).
+    - **Layer 3: Keyword Scanning with Disambiguation Blacklists** (preventing food/gaming/sports collisions in lyrical contexts).
+    - **Layer 4: Sentiment & Valence Fallback** (Joy $\to$ ✨, Sadness $\to$ 🌧️, Romance $\to$ 💖, Hype $\to$ ⚡).
+    - **Layer 5: Melodic Default** ($\to$ 🎵).
+  - Built a **5-Way Kinetic Emoji Motion Choreographer**:
+    - `BOUNCE` (0): Elastic pop entrance with energetic harmonic bobbing.
+    - `FLOAT` (1): Dreamy sinusoidal floating drift for mellow/sad/space lyrics.
+    - `PULSE` (2): Double-throb heartbeat for romantic and emotional lyrics.
+    - `WIGGLE` (3): High-frequency rapid tremor for fire, rock, and hype lyrics.
+    - `SPARKLE` (4): Orbital micro-sparkle stars revolving around the emoji.
+  - Implemented **Adaptive On-Screen Positioning**: dynamically positions emojis beside the focal word, floating above wide focal words, or centered, guaranteeing emojis are **never dropped or clipped**.
