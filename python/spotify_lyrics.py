@@ -80,6 +80,45 @@ def parse_lrc(lrc_text):
                 pass
     return sorted(lyrics, key=lambda x: x['time'])
 
+def get_startup_vbs_path():
+    appdata = os.environ.get('APPDATA', '')
+    if not appdata:
+        return None
+    return os.path.join(appdata, r'Microsoft\Windows\Start Menu\Programs\Startup', 'LyricCast_AutoStart.vbs')
+
+def is_autostart_enabled():
+    path = get_startup_vbs_path()
+    return os.path.exists(path) if path else False
+
+def set_autostart(enable: bool):
+    path = get_startup_vbs_path()
+    if not path:
+        return False
+    if enable:
+        repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        bat_path = os.path.join(repo_dir, 'Start_LyricCast.bat')
+        vbs_content = (
+            'Set WshShell = CreateObject("WScript.Shell")\n'
+            f'WshShell.CurrentDirectory = "{repo_dir}"\n'
+            f'WshShell.Run """{bat_path}""", 0, False\n'
+        )
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(vbs_content)
+            print(f"[AutoStart] Enabled -> created {path}")
+            return True
+        except Exception as e:
+            print(f"[AutoStart] Error enabling: {e}")
+            return False
+    else:
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+                print(f"[AutoStart] Disabled -> removed {path}")
+            except Exception as e:
+                print(f"[AutoStart] Error disabling: {e}")
+        return True
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
@@ -91,6 +130,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(CURRENT_SCENE).encode('utf-8'))
             return
+        elif self.path == '/api/settings':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            resp = dict(CURRENT_SETTINGS)
+            resp['autoRunBoot'] = is_autostart_enabled()
+            self.wfile.write(json.dumps(resp).encode('utf-8'))
+            return
         return super().do_GET()
 
     def do_POST(self):
@@ -100,6 +148,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             try:
                 settings = json.loads(post_data.decode('utf-8'))
+                if 'autoRunBoot' in settings:
+                    set_autostart(bool(settings['autoRunBoot']))
                 CURRENT_SETTINGS.update(settings)
                 print(f"\nSettings updated from Dashboard: {CURRENT_SETTINGS}")
                 self.send_response(200)
