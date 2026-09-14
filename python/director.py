@@ -325,6 +325,28 @@ class LyricDirector:
         self.song_history.append(scene)
         return scene
 
+    def analyze_line_expressive(self, line_text, duration=2.5, song_position=0.0):
+        """Expressive++ Mode: Leverages full Unicode emoji catalog rasterized to 16x16 1-bit bitmaps."""
+        scene = self.analyze_line(line_text, duration=duration, song_position=song_position)
+        if scene.get("type") == "idle":
+            return scene
+
+        try:
+            from emoji_dictionary import find_emoji_for_words
+            from emoji_rasterizer import rasterize_emoji_16x16
+
+            words = line_text.strip().split()
+            emoji = find_emoji_for_words(words)
+            if emoji:
+                hex_str, _ = rasterize_emoji_16x16(emoji)
+                if hex_str:
+                    scene["emoji"] = emoji
+                    scene["doodle"] = f"BMP:{hex_str}"
+        except Exception as e:
+            print(f"[Director] Expressive emoji error: {e}")
+
+        return scene
+
     def format_serial_packet(self, scene):
         if scene["type"] == "idle":
             return f"L|{scene['text']}|\n"

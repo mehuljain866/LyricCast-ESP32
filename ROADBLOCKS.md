@@ -123,3 +123,25 @@
 * **The Solution Strategy:**
   - Use a **1000mAh-1200mAh LiPo battery** with a TP4056 USB-C charge controller (~8-10 hours continuous play).
   - Implement ESP32 **Light Sleep** when playback is paused, dropping current draw to **< 1mA** for multi-day standby.
+
+---
+
+## 6. Expressive++ Unicode Emoji & Display Roadblocks
+
+### Roadblock 6.1: Repetitive Hand-Drawn Doodles vs. Full Unicode Catalog (3,600+ Emojis)
+* **The Symptom:** Hand-drawn vector doodles (50 presets) became visually repetitive across long listening sessions. Expanding to full Unicode emojis directly on the ESP32 faced a massive storage barrier: storing 3,600+ bitmap glyphs in ESP32 Flash memory would consume megabytes of firmware space and make adding new emojis impossible without reflashing the microcontroller.
+* **The Root Cause:** Embedded microcontrollers lack the font rendering engines (FreeType/HarfBuzz) and vector font file storage (`seguiemj.ttf` is > 1.5MB) required for native emoji rendering.
+* **The Solution:**
+  - Implemented **Dynamic Python-Side 1-Bit Monochrome Rasterization**: whenever an emoji is detected via the semantic dictionary (1,200+ keywords), Pillow dynamically rasterizes it at 16×16 pixels into a 32-byte 1-bit monochrome bitmap.
+  - The 32 bytes are encoded into a compact 64-character hex string (`BMP:<hex>`) and streamed in the existing serial scene packet (`K|...`).
+  - Transmission takes only **5.5 ms** over 115200 baud serial, and the ESP32 renders it instantly in **< 0.1 ms** via `display.drawBitmap()`, allowing 100% access to all Unicode emojis with 0 KB added Flash bloat.
+
+---
+
+### Roadblock 6.2: 1-Bit Monochrome OLED Gradients & Brightness Limitation
+* **The Symptom:** The SSD1306 OLED display is binary monochrome (pixels are strictly 100% on or 100% off with no per-pixel hardware brightness control), making smooth visual gradients and atmospheric depth seemingly impossible.
+* **The Root Cause:** Hardware limitation of standard 0.96" I2C OLED displays.
+* **The Solution:**
+  - Implemented **Spatial 4×4 Bayer Ordered Dithering**: by mapping pixel activation probability through a 4×4 threshold matrix, the human eye perceives soft spatial grayscale gradients.
+  - Added an ambient 3-row dithering floor gradient (`y=45..47`) directly separating the Blue lyric canvas from the Yellow status bar, creating an ambient floor glow.
+  - Added an animated `PARTICLE_GRADIENT` wave mode that produces shifting, ethereal aurora mist across the display canvas.

@@ -179,7 +179,7 @@ void drawProgressiveCoffin(int cx, int cy, float progress) {
 }
 
 // ==========================================
-// CUSTOMIZABLE AMBIENT PARTICLES (7 Styles)
+// CUSTOMIZABLE AMBIENT PARTICLES (8 Styles)
 // ==========================================
 enum ParticleStyle {
   PARTICLE_SPARKLES = 0,
@@ -188,9 +188,30 @@ enum ParticleStyle {
   PARTICLE_BUBBLES = 3,
   PARTICLE_RAIN = 4,
   PARTICLE_CLOUDS = 5,
-  PARTICLE_OFF = 6
+  PARTICLE_OFF = 6,
+  PARTICLE_GRADIENT = 7
 };
 ParticleStyle currentParticleStyle = PARTICLE_SPARKLES;
+
+// 4x4 Bayer ordered dithering threshold matrix for 1-bit OLED gradients
+static const uint8_t bayer4x4[4][4] = {
+  {  0,  8,  2, 10 },
+  { 12,  4, 14,  6 },
+  {  3, 11,  1,  9 },
+  { 15,  7, 13,  5 }
+};
+
+void drawExpressiveHorizonGradient() {
+  // Soft ambient 3-row dithering gradient floor above yellow status band (y=45..47)
+  for (int y = 45; y < 48; y++) {
+    int threshold = (y == 45) ? 1 : ((y == 46) ? 3 : 6);
+    for (int x = 0; x < 128; x++) {
+      if (threshold > bayer4x4[y % 4][x % 4]) {
+        display.drawPixel(x, y, SSD1306_WHITE);
+      }
+    }
+  }
+}
 
 void drawLivingCanvas() {
   if (currentParticleStyle == PARTICLE_OFF) return;
@@ -244,6 +265,19 @@ void drawLivingCanvas() {
         display.drawCircle(cx + 3, cy, 3, SSD1306_WHITE);
         display.drawCircle(cx, cy - 2, 4, SSD1306_WHITE);
         display.drawLine(cx - 6, cy + 3, cx + 6, cy + 3, SSD1306_WHITE);
+      }
+    }
+  } else if (currentParticleStyle == PARTICLE_GRADIENT) {
+    // Subtle Bayer ordered dithering gradient wave
+    for (int y = 0; y < 48; y += 2) {
+      float wave = sin((t * 0.0015f) + (y * 0.1f)) * 0.5f + 0.5f;
+      int intensity = (int)(wave * 5.0f);
+      if (intensity > 0) {
+        for (int x = 0; x < 128; x += 2) {
+          if (intensity > bayer4x4[y % 4][x % 4]) {
+            display.drawPixel(x, y, SSD1306_WHITE);
+          }
+        }
       }
     }
   }
@@ -887,6 +921,7 @@ void drawDoodle(String doodle, int cx, int cy, float progress, unsigned long now
 // SCENE GRAPH & KINETIC TRANSITIONS
 // ==========================================
 bool isSketchbookMode = true;
+bool isExpressiveMode = true; // Expressive++ mode active by default
 
 struct SketchScene {
   String metaphor = "NORMAL";
@@ -900,6 +935,8 @@ struct SketchScene {
   uint32_t durationMs = 2500;
   int fontPreset = 0;
   int fxFlags = 0;
+  bool hasBitmap = false;
+  uint8_t bitmapData[32];
 };
 
 SketchScene currentSketch;
@@ -1321,7 +1358,11 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       drawProgressiveText(s.focalWord, fx, fy, focalFont, progress);
       if (s.underline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, progress);
       if (s.doodle != "NONE" && fx + fw + 14 <= 126) {
-        drawDoodle(s.doodle, min(120, fx + fw + 8), fy - 6, progress, now);
+        if (s.hasBitmap) {
+          display.drawBitmap(min(120, fx + fw + 8) - 1, fy - 6 - 7, s.bitmapData, 16, 16, SSD1306_WHITE);
+        } else {
+          drawDoodle(s.doodle, min(120, fx + fw + 8), fy - 6, progress, now);
+        }
       }
     }
     return;
@@ -1410,7 +1451,11 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       int dx = fx + fw + 6;
       int dy = focalY - 5;
       if (dx + 12 > 126) dx = max(4, fx - 14);
-      drawDoodle(s.doodle, dx, dy, progress, now);
+      if (s.hasBitmap) {
+        display.drawBitmap(dx - 1, dy - 7, s.bitmapData, 16, 16, SSD1306_WHITE);
+      } else {
+        drawDoodle(s.doodle, dx, dy, progress, now);
+      }
     }
   }
 
@@ -1447,6 +1492,9 @@ void drawSketchbookScene() {
   float rawProgress = (currentSketch.durationMs > 0) ? ((float)elapsed / currentSketch.durationMs) : 1.0f;
   if (rawProgress > 1.0f) rawProgress = 1.0f;
 
+  if (isExpressiveMode) {
+    drawExpressiveHorizonGradient();
+  }
   drawLivingCanvas();
 
   unsigned long transElapsed = now - sketchTransitionStartMs;
@@ -1525,6 +1573,7 @@ void parseSerialData(String data) {
     else if (pCode == "BUBBLES") currentParticleStyle = PARTICLE_BUBBLES;
     else if (pCode == "RAIN") currentParticleStyle = PARTICLE_RAIN;
     else if (pCode == "CLOUDS") currentParticleStyle = PARTICLE_CLOUDS;
+    else if (pCode == "GRADIENT") currentParticleStyle = PARTICLE_GRADIENT;
     else if (pCode == "OFF") currentParticleStyle = PARTICLE_OFF;
     else currentParticleStyle = PARTICLE_SPARKLES;
   }
@@ -1551,6 +1600,25 @@ void parseSerialData(String data) {
       newScene.tilt = data.substring(p6 + 1, p7).toInt();
       newScene.underline = (data.substring(p7 + 1, p8).toInt() == 1);
       
+      if (newScene.doodle.startsWith("BMP:")) {
+        newScene.hasBitmap = true;
+        String hex = newScene.doodle.substring(4);
+        int hexLen = hex.length();
+        for (int i = 0; i < 32 && (i * 2 + 1) < hexLen; i++) {
+          char c1 = hex.charAt(i * 2);
+          char c2 = hex.charAt(i * 2 + 1);
+          auto hexVal = [](char c) -> uint8_t {
+            if (c >= '0' && c <= '9') return c - '0';
+            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+            return 0;
+          };
+          newScene.bitmapData[i] = (hexVal(c1) << 4) | hexVal(c2);
+        }
+      } else {
+        newScene.hasBitmap = false;
+      }
+      
       if (p9 > 0) {
         newScene.durationMs = data.substring(p8 + 1, p9).toInt();
         if (p10 > 0) {
@@ -1566,7 +1634,7 @@ void parseSerialData(String data) {
         newScene.fxFlags = 0;
       }
       
-      if (newScene.focalWord != currentSketch.focalWord || newScene.prefix != currentSketch.prefix || newScene.suffix != currentSketch.suffix) {
+      if (newScene.focalWord != currentSketch.focalWord || newScene.prefix != currentSketch.prefix || newScene.suffix != currentSketch.suffix || newScene.doodle != currentSketch.doodle) {
         oldSketch = currentSketch;
         currentSketch = newScene;
         sketchSceneStartMs = millis();
@@ -1631,7 +1699,8 @@ void parseSerialData(String data) {
   }
   else if (data.startsWith("S|")) {
     bool wasV2 = isKineticV2Mode;
-    isSketchbookMode = (data.indexOf("SKETCHBOOK") > 0);
+    isExpressiveMode = (data.indexOf("EXPRESSIVE") > 0);
+    isSketchbookMode = (data.indexOf("SKETCHBOOK") > 0) || isExpressiveMode;
     isKineticV2Mode = (data.indexOf("KINETIC2") > 0);
     isKineticMode = (data.indexOf("KINETIC") > 0 && !isKineticV2Mode && !isSketchbookMode);
     isGiantMode = (data.indexOf("GIANT") > 0);
@@ -1660,6 +1729,7 @@ void parseSerialData(String data) {
 }
 
 void setup() {
+  Serial.setRxBufferSize(1024);
   Serial.begin(115200);
   
   Wire.begin(5, 4);

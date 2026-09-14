@@ -332,9 +332,11 @@ async def main():
                     last_sent_text = "" 
 
                 # Send mode updates if changed
-                current_mode = CURRENT_SETTINGS.get('captionMode', 'sketchbook')
+                current_mode = CURRENT_SETTINGS.get('captionMode', 'expressive')
                 if current_mode != last_sent_mode:
-                    if current_mode == 'sketchbook':
+                    if current_mode in ['expressive', 'expressive++']:
+                        ser.write(f"S|EXPRESSIVE\n".encode('utf-8', 'replace'))
+                    elif current_mode == 'sketchbook':
                         ser.write(f"S|SKETCHBOOK\n".encode('utf-8', 'replace'))
                     elif current_mode == 'giant':
                         ser.write(f"S|GIANT\n".encode('utf-8', 'replace'))
@@ -375,21 +377,25 @@ async def main():
                         elif logo_set == 'smile': current_lyric = "☺"
                         
                     # =====================================
-                    # SKETCHBOOK / SEMANTIC DIRECTOR MODE
+                    # SKETCHBOOK & EXPRESSIVE++ MODES
                     # =====================================
-                    if current_mode == 'sketchbook':
+                    if current_mode in ['sketchbook', 'expressive', 'expressive++']:
                         if current_lyric != last_sent_text:
                             last_sent_text = current_lyric
                             line_duration = max(0.8, next_lyric_time - current_lyric_time)
-                            scene = director.analyze_line(current_lyric, duration=line_duration, song_position=position_s)
+                            if current_mode in ['expressive', 'expressive++']:
+                                scene = director.analyze_line_expressive(current_lyric, duration=line_duration, song_position=position_s)
+                            else:
+                                scene = director.analyze_line(current_lyric, duration=line_duration, song_position=position_s)
                             scene['title'] = title
                             scene['artist'] = artist
                             CURRENT_SCENE = scene
                             
-                            # Format and send ESP32 Sketchbook Packet
+                            # Format and send ESP32 Sketchbook / Expressive Packet
                             esp_packet = sketchbook.format_esp32_packet(scene)
                             ser.write(esp_packet.encode('utf-8', 'replace'))
-                            print(f"[{position_s:.2f}s] [🎬 {scene['metaphor']}|🎨 {scene['doodle']}] {current_lyric}")
+                            display_tag = scene.get('emoji', scene.get('doodle', 'NONE'))
+                            print(f"[{position_s:.2f}s] [🎬 {scene['metaphor']}|🎨 {display_tag}] {current_lyric}")
 
                     elif current_mode == 'giant' or current_mode == 'kinetic' or current_mode == 'kinetic2':
                         words = current_lyric.split()
