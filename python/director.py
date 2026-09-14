@@ -326,22 +326,26 @@ class LyricDirector:
         return scene
 
     def analyze_line_expressive(self, line_text, duration=2.5, song_position=0.0):
-        """Expressive++ Mode: Leverages full Unicode emoji catalog rasterized to 16x16 1-bit bitmaps."""
+        """Expressive++ Mode: Leverages context-aware semantic emoji engine and dynamic 16x16 rasterization."""
         scene = self.analyze_line(line_text, duration=duration, song_position=song_position)
         if scene.get("type") == "idle":
             return scene
 
         try:
-            from emoji_dictionary import find_emoji_for_words
+            from emoji_engine import analyze_lyric_semantics
             from emoji_rasterizer import rasterize_emoji_16x16
 
-            words = line_text.strip().split()
-            emoji = find_emoji_for_words(words)
+            focal = scene.get("focal_word", "")
+            emoji, motion_type = analyze_lyric_semantics(line_text, focal_word=focal)
             if emoji:
                 hex_str, _ = rasterize_emoji_16x16(emoji)
                 if hex_str:
                     scene["emoji"] = emoji
+                    scene["emoji_motion"] = motion_type
                     scene["doodle"] = f"BMP:{hex_str}"
+                    # Encode motion_type into bits 1..3 of fx_flags
+                    curr_fx = scene.get("fx_flags", 0) & 1
+                    scene["fx_flags"] = curr_fx | ((motion_type & 0x07) << 1)
         except Exception as e:
             print(f"[Director] Expressive emoji error: {e}")
 

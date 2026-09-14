@@ -201,18 +201,6 @@ static const uint8_t bayer4x4[4][4] = {
   { 15,  7, 13,  5 }
 };
 
-void drawExpressiveHorizonGradient() {
-  // Soft ambient 3-row dithering gradient floor above yellow status band (y=45..47)
-  for (int y = 45; y < 48; y++) {
-    int threshold = (y == 45) ? 1 : ((y == 46) ? 3 : 6);
-    for (int x = 0; x < 128; x++) {
-      if (threshold > bayer4x4[y % 4][x % 4]) {
-        display.drawPixel(x, y, SSD1306_WHITE);
-      }
-    }
-  }
-}
-
 void drawLivingCanvas() {
   if (currentParticleStyle == PARTICLE_OFF) return;
   
@@ -1259,6 +1247,77 @@ void drawParticles() {
 }
 
 // ==========================================
+// KINETIC EMOJI MOTION ENGINE (Expressive++ Mode)
+// Motion Types:
+// 0: BOUNCE  (Energetic bobbing + elastic entrance pop)
+// 1: FLOAT   (Dreamy sinusoidal drift & wave)
+// 2: PULSE   (Heartbeat rhythmic double-throb)
+// 3: WIGGLE  (High-energy rapid tremor/shiver)
+// 4: SPARKLE (Subtle drift with orbiting micro-sparkles)
+// ==========================================
+void drawKineticEmoji(const uint8_t* bitmap, int anchorX, int anchorY, float progress, unsigned long now, int motionType) {
+  if (!bitmap) return;
+  
+  // 1. Elastic Pop Entrance (0.0 to 0.35 of line duration)
+  int enterOffsetY = 0;
+  if (progress < 0.35f) {
+    float t = progress / 0.35f;
+    float easeT = easeOutBack(t);
+    enterOffsetY = (int)(14.0f * (1.0f - min(1.15f, easeT)));
+  }
+
+  // 2. Dynamic Kinetic Motion Offsets
+  int mx = 0;
+  int my = enterOffsetY;
+
+  if (motionType == 1) {
+    // FLOAT: Dreamy floating wave & horizontal drift
+    mx += (int)(sin(now * 0.003f) * 2.5f);
+    my += (int)(cos(now * 0.004f) * 2.0f);
+  } else if (motionType == 2) {
+    // PULSE: Rhythmic double-throb heartbeat
+    unsigned long beatCycle = now % 700;
+    if (beatCycle < 140) {
+      my -= 2;
+    } else if (beatCycle >= 180 && beatCycle < 300) {
+      my -= 1;
+    }
+  } else if (motionType == 3) {
+    // WIGGLE: High energy rapid tremor
+    mx += (int)(sin(now * 0.038f) * 2.2f);
+    my += (int)(cos(now * 0.028f) * 1.2f);
+  } else if (motionType == 4) {
+    // SPARKLE: Subtle drift with orbiting micro-sparkles
+    mx += (int)(sin(now * 0.002f) * 1.5f);
+    my += (int)(cos(now * 0.003f) * 1.5f);
+    
+    // Orbiting sparkle star
+    float ang = (float)(now % 1000) / 1000.0f * 6.28318f;
+    int sx = anchorX + 8 + (int)(cos(ang) * 11.0f);
+    int sy = anchorY + my + 8 + (int)(sin(ang) * 9.0f);
+    if (sx >= 0 && sx <= 126 && sy >= 2 && sy <= 45) {
+      display.drawPixel(sx, sy, SSD1306_WHITE);
+      if ((now / 120) % 2 == 0) {
+        display.drawPixel(sx + 1, sy, SSD1306_WHITE);
+        display.drawPixel(sx - 1, sy, SSD1306_WHITE);
+        display.drawPixel(sx, sy + 1, SSD1306_WHITE);
+        display.drawPixel(sx, sy - 1, SSD1306_WHITE);
+      }
+    }
+  } else {
+    // Default 0: BOUNCE: Rhythmic energetic bobbing
+    my += (int)(sin(now * 0.008f) * 2.5f);
+  }
+
+  int finalX = constrain(anchorX + mx, 1, 111);
+  int finalY = anchorY + my;
+
+  if (finalY >= -15 && finalY <= 46) {
+    display.drawBitmap(finalX, finalY, bitmap, 16, 16, SSD1306_WHITE);
+  }
+}
+
+// ==========================================
 // RENDER SINGLE SKETCH SCENE (Strict 128x48 Pixel Geometry with Offset)
 // ==========================================
 void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, unsigned long now) {
@@ -1357,10 +1416,13 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     if (fy >= -10 && fy <= 55) {
       drawProgressiveText(s.focalWord, fx, fy, focalFont, progress);
       if (s.underline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, progress);
-      if (s.doodle != "NONE" && fx + fw + 14 <= 126) {
+      if (s.doodle != "NONE") {
         if (s.hasBitmap) {
-          display.drawBitmap(min(120, fx + fw + 8) - 1, fy - 6 - 7, s.bitmapData, 16, 16, SSD1306_WHITE);
-        } else {
+          int anchorX = (fx + fw + 18 <= 126) ? (fx + fw + 4) : 108;
+          int anchorY = (fx + fw + 18 <= 126) ? (fy - 10) : (2 + yOffset);
+          int motionType = (s.fxFlags >> 1) & 0x07;
+          drawKineticEmoji(s.bitmapData, anchorX, anchorY, progress, now, motionType);
+        } else if (fx + fw + 14 <= 126) {
           drawDoodle(s.doodle, min(120, fx + fw + 8), fy - 6, progress, now);
         }
       }
@@ -1448,12 +1510,24 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     } else if (s.doodle == "WAVE") {
       drawProgressiveWave(minX, minX + availWidth, 44 + yOffset, progress, now);
     } else if (s.doodle != "NONE" && s.doodle != "UNDERLINE") {
-      int dx = fx + fw + 6;
-      int dy = focalY - 5;
-      if (dx + 12 > 126) dx = max(4, fx - 14);
       if (s.hasBitmap) {
-        display.drawBitmap(dx - 1, dy - 7, s.bitmapData, 16, 16, SSD1306_WHITE);
+        int anchorX, anchorY;
+        if (fx + fw + 18 <= 126) {
+          anchorX = fx + fw + 4;
+          anchorY = focalY - 8;
+        } else if (fx - 18 >= minX) {
+          anchorX = fx - 18;
+          anchorY = focalY - 8;
+        } else {
+          anchorX = fx + (fw - 16) / 2;
+          anchorY = hasPrefix ? (focalY + 3) : max(2, focalY - fh - 8);
+        }
+        int motionType = (s.fxFlags >> 1) & 0x07;
+        drawKineticEmoji(s.bitmapData, anchorX, anchorY, progress, now, motionType);
       } else {
+        int dx = fx + fw + 6;
+        int dy = focalY - 5;
+        if (dx + 12 > 126) dx = max(4, fx - 14);
         drawDoodle(s.doodle, dx, dy, progress, now);
       }
     }
@@ -1481,6 +1555,14 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     if (sx < minX) sx = minX;
     drawProgressiveText(s.suffix, sx, suffixY, suffixFont, progress);
   }
+
+  // 5. Headless / focal-less fallback with bitmap
+  if (!hasFocal && s.hasBitmap) {
+    int motionType = (s.fxFlags >> 1) & 0x07;
+    int anchorX = 108;
+    int anchorY = hasPrefix ? (prefixY + 4) : (14 + yOffset);
+    drawKineticEmoji(s.bitmapData, anchorX, anchorY, progress, now, motionType);
+  }
 }
 
 // ==========================================
@@ -1492,9 +1574,6 @@ void drawSketchbookScene() {
   float rawProgress = (currentSketch.durationMs > 0) ? ((float)elapsed / currentSketch.durationMs) : 1.0f;
   if (rawProgress > 1.0f) rawProgress = 1.0f;
 
-  if (isExpressiveMode) {
-    drawExpressiveHorizonGradient();
-  }
   drawLivingCanvas();
 
   unsigned long transElapsed = now - sketchTransitionStartMs;
