@@ -462,6 +462,19 @@
             </div>
         </div>
 
+        <div class="form-group" id="text-bounce-group">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <label style="margin-bottom:0.2rem;">Text Vertical Bounce / Motion</label>
+                    <div style="font-size:0.8rem; color:#718096;">Allows lyric text to smoothly swoop and bounce vertically (default OFF to prevent edge clipping)</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="text-bounce">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
         <div class="form-group">
             <label>Startup Logo</label>
             <div class="logo-toggle">
@@ -689,6 +702,7 @@
             syncOffset: currentSyncOffset,
             captionMode: document.getElementById('caption-mode-select').value,
             cameraMotion: document.querySelector('input[name="cameraMotion"]:checked')?.value || '2d',
+            textBounce: Boolean(document.getElementById('text-bounce')?.checked),
             logo: document.querySelector('input[name="logo"]:checked').value,
             uiScale: document.getElementById('ui-scale').value,
             font: document.getElementById('font-select').value,
@@ -744,6 +758,10 @@
                     const el = document.querySelector(`input[name="cameraMotion"][value="${s.cameraMotion}"]`);
                     if (el) el.checked = true;
                 }
+                if (s.textBounce !== undefined) {
+                    const el = document.getElementById('text-bounce');
+                    if (el) el.checked = Boolean(s.textBounce);
+                }
                 if (s.font) {
                     const el = document.getElementById('font-select');
                     if (el) el.value = s.font;
@@ -767,6 +785,10 @@
         const autoRunEl = document.getElementById('auto-run-boot');
         if (autoRunEl) {
             autoRunEl.addEventListener('change', saveSettings);
+        }
+        const textBounceEl = document.getElementById('text-bounce');
+        if (textBounceEl) {
+            textBounceEl.addEventListener('change', saveSettings);
         }
     });
 
@@ -972,6 +994,7 @@
 
             // Virtual Camera 2D Engine (1D Horizontal vs 2D Open Canvas)
             const is2D = (currentSceneData.camera_motion === '2d') || ((currentSceneData.fx_flags & 0x1000) !== 0);
+            const hasTextBounce = (currentSceneData.text_bounce === true) || ((currentSceneData.fx_flags & 0x2000) !== 0);
             const availW = w - 40;
             let cameraX = 0;
             let cameraY = 0;
@@ -989,7 +1012,7 @@
                 cameraX = maxScroll * panProgress;
             }
 
-            if (is2D) {
+            if (is2D && hasTextBounce) {
                 // 2D Cinematic Camera Glide & Swoop across XY Open Canvas
                 if (metaphor === 'flying') {
                     cameraY = (progress - 0.5) * -16;

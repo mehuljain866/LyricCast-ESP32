@@ -110,9 +110,13 @@ class LyricDirector:
         self.default_font_preset = 0 # 0=Classic Animated Cursive
         self.song_font_preset = 0
         self.camera_motion = "2d" # "1d"=horizontal sweep, "2d"=open canvas diagonal swoop
+        self.text_bounce = False # Default OFF: keep text stable vertically to prevent edge clipping
 
     def set_camera_motion(self, mode: str):
         self.camera_motion = (mode or "2d").lower()
+
+    def set_text_bounce(self, enabled: bool):
+        self.text_bounce = bool(enabled)
 
     def set_genre_adaptive(self, enabled: bool):
         self.genre_adaptive = enabled
@@ -373,8 +377,16 @@ class LyricDirector:
                 fx |= 0x1000
             else:
                 fx &= ~0x1000
+
+            # Encode Text Bounce flag into fx_flags bit 13 (0x2000)
+            if self.text_bounce:
+                fx |= 0x2000
+            else:
+                fx &= ~0x2000
+
             scene["fx_flags"] = fx
             scene["camera_motion"] = self.camera_motion
+            scene["text_bounce"] = self.text_bounce
         except Exception as e:
             print(f"[Director] Expressive emoji error: {e}")
 

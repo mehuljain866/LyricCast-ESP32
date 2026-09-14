@@ -219,3 +219,15 @@
   4. **Dashboard Camera Dimension Toggle**:
      - Added a segmented radio toggle to the Web Dashboard allowing instant switching between `1D: X-Axis (Horizontal Sweep)` and `2D: XY-Axis (Cinematic Open Canvas)`, with full auto-saving and real-time syncing to ESP32 firmware via bit 12 (`0x1000`) of `fx_flags`.
 
+---
+
+### Roadblock 6.7: Vertical Text Bounce & Edge Clipping vs. Rock-Solid Baselines
+* **The Symptom:** In Expressive++ mode, lyric lines bobbed and swooped vertically up and down as playback progressed. On multi-line lyrics and large font presets, this vertical motion caused top and bottom text baselines to shift into the display boundary edges (rows $0$ and $47$), clipping ascenders (*t, d, h, l*) and descenders (*g, y, p*).
+* **The Root Cause:** Continuous vertical sine waves (`breathe`) and vertical camera crane arcs ($camY = \sin(\text{progress} \cdot \pi) \cdot 6.0f$) applied directly to the text baseline on a 48-pixel high blue zone left insufficient vertical margin for tall fonts.
+* **The Solution:**
+  - Added a dedicated **Text Vertical Bounce / Motion** toggle to the Web Dashboard under Display Settings, configured to **OFF by default**.
+  - Encoded text bounce state into bit 13 (`0x2000`) of `fx_flags` in scene packets.
+  - When disabled (default): text baselines are locked rock-solid vertically (`camY = 0`, `breathe = 0`, zero metaphor vertical shift), completely eliminating top and bottom edge clipping while horizontal unclipped camera panning ($camX$) and dynamic 2D diagonal emoji framing remain fully active.
+  - When enabled: allows users who enjoy kinetic text bobs to re-activate vertical swooping.
+
+

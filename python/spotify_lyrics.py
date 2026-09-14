@@ -23,6 +23,7 @@ sketchbook = SketchbookEngine()
 CURRENT_SETTINGS = {
     'captionMode': 'expressive',
     'cameraMotion': '2d',
+    'textBounce': False,
     'font': 'animated',
     'companion': 'cat',
     'logo': 'music',
@@ -386,6 +387,8 @@ async def main():
                             last_sent_text = current_lyric
                             line_duration = max(0.8, next_lyric_time - current_lyric_time)
                             if current_mode in ['expressive', 'expressive++']:
+                                director.set_camera_motion(CURRENT_SETTINGS.get('cameraMotion', '2d'))
+                                director.set_text_bounce(CURRENT_SETTINGS.get('textBounce', False))
                                 scene = director.analyze_line_expressive(current_lyric, duration=line_duration, song_position=position_s)
                             else:
                                 scene = director.analyze_line(current_lyric, duration=line_duration, song_position=position_s)

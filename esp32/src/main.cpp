@@ -1369,13 +1369,17 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     focalY = 28 + yOffset;
   }
 
-  float breathe = sin(now * 0.006f) * 1.0f;
-  if (s.metaphor == "FALLING") {
-    focalY += (int)(-5 + easeOutBounce(min(1.0f, progress * 3.5f)) * 5.0f);
-  } else if (s.metaphor == "FLYING") {
-    focalY += (int)(5 - easeOutQuad(min(1.0f, progress * 3.5f)) * 5.0f);
-  } else {
-    focalY += (int)breathe;
+  bool hasTextBounce = (s.fxFlags & 0x2000) != 0;
+  float breathe = 0.0f;
+  if (hasTextBounce) {
+    breathe = sin(now * 0.006f) * 1.0f;
+    if (s.metaphor == "FALLING") {
+      focalY += (int)(-5 + easeOutBounce(min(1.0f, progress * 3.5f)) * 5.0f);
+    } else if (s.metaphor == "FLYING") {
+      focalY += (int)(5 - easeOutQuad(min(1.0f, progress * 3.5f)) * 5.0f);
+    } else {
+      focalY += (int)breathe;
+    }
   }
 
   // Choose Font Preset (Unified font family per song)
@@ -1427,7 +1431,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
       cameraX = (int)(maxScroll * panProgress);
     }
     int cameraY = 0;
-    if (is2DCanvas) {
+    if (is2DCanvas && hasTextBounce) {
       cameraY = (int)(sin(progress * 3.14159f) * 4.0f);
     }
     int fy = 29 + yOffset + (int)breathe - cameraY;
@@ -1523,7 +1527,7 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     cameraX = (int)(maxScroll * panProgress);
   }
 
-  if (is2DCanvas) {
+  if (is2DCanvas && hasTextBounce) {
     // 2D Cinematic Open Canvas: non-linear crane swoop / multi-axis diagonal trajectory
     if (s.metaphor == "FLYING") {
       cameraY = (int)((progress - 0.5f) * -10.0f);
