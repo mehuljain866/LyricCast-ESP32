@@ -1,15 +1,103 @@
 """
 LyricCast Context-Aware Semantic Emoji Engine (Expressive++)
-Comprehensive lyrical intelligence:
-1. Extensive multi-word lyrical idioms & phrases (matched first)
-2. 500+ lyrical keywords across body, people, clothing, actions, emotions, music
-3. Smart word disambiguation & priority weighting (e.g. clothing > beat, speed > burger)
-4. Context-sensitive, non-repeating lyrical fallback (no more 10x repeated music logos!)
+Vetted 1-Bit Monochrome Emojis, Kinetic Motion Modes & Dynamic Repetition Cycling.
 """
 
 import re
 
+# Motion Type Constants
+MOTION_FLOAT = 0       # Gentle sinusoidal floating/bobbing (dreamy, mellow, celestial)
+MOTION_HEARTBEAT = 1   # Authentic lub-dub double-beat scale pulse (hearts, romance, chest)
+MOTION_FIRE = 2        # Chaotic high-frequency jitter/flicker (fire, lightning, hype, energy)
+MOTION_DANCE = 3       # Rhythmic horizontal & vertical rock/sway (party, dancing, instruments)
+MOTION_POP = 4         # Elastic pop entrance (footwear, rockets, explosions, pops)
+
+EMOJI_MOTION_MAP = {
+    "❤️": MOTION_HEARTBEAT,
+    "❤": MOTION_HEARTBEAT,
+    "💓": MOTION_HEARTBEAT,
+    "💔": MOTION_HEARTBEAT,
+    "💘": MOTION_HEARTBEAT,
+    "💖": MOTION_HEARTBEAT,
+    "💞": MOTION_HEARTBEAT,
+    "🔥": MOTION_FIRE,
+    "⚡": MOTION_FIRE,
+    "💥": MOTION_FIRE,
+    "🪩": MOTION_DANCE,
+    "💃": MOTION_DANCE,
+    "🕺": MOTION_DANCE,
+    "🎸": MOTION_DANCE,
+    "🥁": MOTION_DANCE,
+    "🎷": MOTION_DANCE,
+    "🎺": MOTION_DANCE,
+    "🎹": MOTION_DANCE,
+    "👟": MOTION_POP,
+    "🚀": MOTION_POP,
+    "💣": MOTION_POP,
+    "🎉": MOTION_POP,
+    "🍾": MOTION_POP,
+}
+
+def get_motion_for_emoji(emoji):
+    return EMOJI_MOTION_MAP.get(emoji, MOTION_FLOAT)
+
+# Dynamic Repetition Variations for Common Song Choruses & Refrains
+# Guarantees repeated lines feel fresh, vibrant, and never stale!
+REPETITION_VARIATIONS = {
+    "shut up and dance": [
+        [("🪩", MOTION_DANCE), ("💃", MOTION_DANCE)],
+        [("💃", MOTION_DANCE), ("⚡", MOTION_FIRE)],
+        [("🪩", MOTION_DANCE), ("✨", MOTION_FLOAT)],
+        [("💃", MOTION_DANCE), ("❤️", MOTION_HEARTBEAT)],
+    ],
+    "dance with me": [
+        [("💃", MOTION_DANCE), ("🪩", MOTION_DANCE)],
+        [("💃", MOTION_DANCE), ("⚡", MOTION_FIRE)],
+        [("💃", MOTION_DANCE), ("✨", MOTION_FLOAT)],
+        [("💃", MOTION_DANCE), ("❤️", MOTION_HEARTBEAT)],
+    ],
+    "don't you dare look back": [
+        [("✋", MOTION_FLOAT), ("👀", MOTION_FLOAT)],
+        [("👀", MOTION_FLOAT), ("⚡", MOTION_FIRE)],
+        [("✋", MOTION_FLOAT), ("✨", MOTION_FLOAT)],
+    ],
+    "keep your eyes on me": [
+        [("👀", MOTION_FLOAT), ("✨", MOTION_FLOAT)],
+        [("👀", MOTION_FLOAT), ("❤️", MOTION_HEARTBEAT)],
+        [("👀", MOTION_FLOAT), ("⚡", MOTION_FIRE)],
+    ],
+    "bound to get together": [
+        [("❤️", MOTION_HEARTBEAT), ("✨", MOTION_FLOAT)],
+        [("💞", MOTION_HEARTBEAT), ("⭐", MOTION_FLOAT)],
+        [("❤️", MOTION_HEARTBEAT), ("⚡", MOTION_FIRE)],
+    ],
+    "this woman is my destiny": [
+        [("👑", MOTION_FLOAT), ("🔮", MOTION_FLOAT)],
+        [("💃", MOTION_DANCE), ("✨", MOTION_FLOAT)],
+        [("❤️", MOTION_HEARTBEAT), ("🔮", MOTION_FLOAT)],
+    ],
+    "felt it in my chest": [
+        [("❤️", MOTION_HEARTBEAT), ("⚡", MOTION_FIRE)],
+        [("❤️", MOTION_HEARTBEAT), ("✨", MOTION_FLOAT)],
+    ],
+    "backless dress": [
+        [("👗", MOTION_FLOAT), ("👟", MOTION_POP)],
+        [("👗", MOTION_FLOAT), ("✨", MOTION_FLOAT)],
+    ],
+    "beat up sneaks": [
+        [("👟", MOTION_POP), ("👗", MOTION_FLOAT)],
+        [("👟", MOTION_POP), ("⚡", MOTION_FIRE)],
+    ],
+}
+
+LINE_REPETITION_TRACKER = {}
+
+def reset_repetition_tracker():
+    global LINE_REPETITION_TRACKER
+    LINE_REPETITION_TRACKER.clear()
+
 # Layer 1: High-Priority Multi-Word Lyrical Idioms & Phrases
+# Strictly vetted 1-bit monochrome icons: crisp, high contrast silhouettes only!
 LYRIC_IDIOMS = [
     # Dancing, Floor & Party
     ("shut up and dance", "🪩"),
@@ -23,14 +111,14 @@ LYRIC_IDIOMS = [
     ("dance floor", "🪩"),
     ("party all night", "🎉"),
     ("all night long", "🪩"),
-    ("turn the music up", "🔊"),
-    ("turn it up", "🔊"),
+    ("turn the music up", "🎵"),
+    ("turn it up", "⚡"),
     ("pop the champagne", "🍾"),
     ("champagne problems", "🍾"),
-    ("hands in the air", "🙌"),
+    ("hands in the air", "✋"),
     ("good vibes", "✨"),
-    ("wild side", "🐺"),
-    
+    ("wild side", "⚡"),
+
     # Looking, Eyes & Staring
     ("eyes on me", "👀"),
     ("eyes on you", "👀"),
@@ -44,20 +132,20 @@ LYRIC_IDIOMS = [
     ("watching me", "👀"),
     ("watching you", "👀"),
     ("see the light", "💡"),
-    
-    # Holding, Hands & Arms
-    ("holding back", "🛑"),
-    ("hold back", "🛑"),
+
+    # Holding, Hands & Arms (Replaced 🛑 with ✋ for pristine 1-bit contrast)
+    ("holding back", "✋"),
+    ("hold back", "✋"),
     ("hold my hand", "🤝"),
     ("take my hand", "🤝"),
     ("took my arm", "🤝"),
     ("take my arm", "🤝"),
-    ("in your arms", "🫂"),
-    ("in my arms", "🫂"),
-    ("hold me tight", "🫂"),
-    ("hold on", "🤝"),
-    
-    # Romance, Love & Destiny
+    ("in your arms", "🤝"),
+    ("in my arms", "🤝"),
+    ("hold me tight", "🤝"),
+    ("hold on", "✋"),
+
+    # Romance, Love & Destiny (Replaced complex ZWJ emojis with bold ❤️)
     ("fall in love", "💘"),
     ("falling in love", "💘"),
     ("in love with", "❤️"),
@@ -65,35 +153,36 @@ LYRIC_IDIOMS = [
     ("kiss me", "💋"),
     ("kiss you", "💋"),
     ("take my breath away", "🌹"),
-    ("head over heels", "🥰"),
+    ("head over heels", "❤️"),
     ("die for you", "🥀"),
-    ("heart of gold", "💛"),
-    ("bound to get together", "✨"),
-    ("bound to be together", "✨"),
+    ("heart of gold", "❤️"),
+    ("bound to get together", "❤️"),
+    ("bound to be together", "❤️"),
     ("get together", "✨"),
-    ("be together", "✨"),
+    ("be together", "❤️"),
     ("my destiny", "🔮"),
-    ("you and me", "💑"),
-    ("stay with me", "🥺"),
+    ("you and me", "❤️"),
+    ("you and i", "❤️"),
+    ("stay with me", "❤️"),
     ("teenage dream", "💭"),
-    
+
     # Heartbreak & Sadness
     ("broken heart", "💔"),
     ("break my heart", "💔"),
     ("breaks my heart", "💔"),
     ("broke my heart", "💔"),
-    ("cry me a river", "😭"),
-    ("tears fall", "😢"),
-    ("tears falling", "😢"),
-    ("tears in my eyes", "🥺"),
-    ("tears rolling down", "😭"),
-    ("heart of stone", "🗿"),
-    ("cold as ice", "🧊"),
+    ("cry me a river", "🌧️"),
+    ("tears fall", "🌧️"),
+    ("tears falling", "🌧️"),
+    ("tears in my eyes", "🌧️"),
+    ("tears rolling down", "🌧️"),
+    ("heart of stone", "💔"),
+    ("cold as ice", "❄️"),
     ("left me alone", "🥀"),
-    ("miss you so", "🥺"),
-    ("felt it in my chest", "💓"),
-    ("in my chest", "💓"),
-    
+    ("miss you so", "❤️"),
+    ("felt it in my chest", "❤️"),
+    ("in my chest", "❤️"),
+
     # Energy, Fire & Speed
     ("on fire", "🔥"),
     ("set fire to", "🔥"),
@@ -101,11 +190,11 @@ LYRIC_IDIOMS = [
     ("burn it down", "🔥"),
     ("light it up", "⚡"),
     ("light up the", "✨"),
-    ("blow my mind", "🤯"),
-    ("rock and roll", "🤘"),
-    ("rock n roll", "🤘"),
-    ("bad guy", "😈"),
-    ("bad girl", "😈"),
+    ("blow my mind", "💥"),
+    ("rock and roll", "🎸"),
+    ("rock n roll", "🎸"),
+    ("bad guy", "⚡"),
+    ("bad girl", "⚡"),
     ("ride or die", "🏎️"),
     ("bullet proof", "🛡️"),
     ("here we go", "🚀"),
@@ -115,7 +204,7 @@ LYRIC_IDIOMS = [
     ("beat up sneakers", "👟"),
     ("backless dress", "👗"),
     ("faded light", "🕯️"),
-    
+
     # Dreamy, Space & Night
     ("head in the clouds", "☁️"),
     ("under the stars", "🌌"),
@@ -126,15 +215,15 @@ LYRIC_IDIOMS = [
     ("in the night", "🌙"),
     ("late night", "🌙"),
     ("sweet dreams", "🌙"),
-    ("golden hour", "🌅"),
+    ("golden hour", "☀️"),
     ("lost in the dark", "🕯️"),
     ("shine bright", "🌟"),
-    
-    # Mind, Communication & Questions
-    ("in my head", "🧠"),
+
+    # Mind, Communication & Questions (Replaced 🤷 with ❓)
+    ("in my head", "💭"),
     ("in my mind", "💭"),
-    ("don't know", "🤷"),
-    ("dont know", "🤷"),
+    ("don't know", "❓"),
+    ("dont know", "❓"),
     ("ring my bell", "🔔"),
     ("call my phone", "📱"),
     ("call me", "📱"),
@@ -145,76 +234,61 @@ LYRIC_IDIOMS = [
     ("drowning in", "🌊"),
 ]
 
-# Layer 2: Comprehensive Lyrical Semantic Lexicon (Word Stems -> Emoji)
+# Layer 2: Comprehensive Lyrical Semantic Lexicon (Word Stems -> Vetted Emoji)
 SEMANTIC_LEXICON = [
     # 1. Vision, Eyes & Gaze
     ("👀", ["eye", "eyes", "look", "looks", "looked", "looking", "stare", "staring", "gaze", "see", "saw", "seeing", "sight", "watch", "watching", "view", "glance"]),
-    
+
     # 2. Hands, Arms, Touch & Holding
-    ("🤝", ["hand", "hands", "hold", "holds", "holding", "held", "touch", "touching", "touched", "reach", "reaching", "grab", "grabbed", "arm", "arms"]),
-    ("🫂", ["hug", "hugs", "embrace", "cuddle", "cuddling", "holdme", "closer"]),
-    
+    ("🤝", ["hand", "hands", "hold", "holds", "holding", "held", "touch", "touching", "touched", "reach", "reaching", "grab", "grabbed", "arm", "arms", "closer"]),
+    ("✋", ["stop", "stopped", "wait", "waiting", "pause", "enough", "stay", "halt", "dare"]),
+
     # 3. People, Women, Men & Identity
-    ("💃", ["woman", "lady", "female", "girl", "girls", "queen", "goddess", "babe", "baby", "juliet"]),
-    ("🕺", ["man", "guy", "boy", "boys", "king", "prince", "gentleman", "dude", "romeo"]),
-    ("👥", ["crowd", "people", "everyone", "everybody", "somebody", "someone", "friends", "together"]),
-    
+    ("💃", ["woman", "lady", "female", "girl", "girls", "juliet"]),
+    ("🕺", ["man", "guy", "boy", "boys", "gentleman", "dude", "romeo"]),
+    ("👑", ["queen", "king", "prince", "princess", "royal", "royalty", "reign", "monarch", "throne", "goddess"]),
+
     # 4. Clothing, Style & Footwear
     ("👗", ["dress", "skirt", "gown", "outfit", "wear", "wearing", "backless", "fashion"]),
     ("👟", ["sneaks", "sneaker", "sneakers", "shoe", "shoes", "boots", "heels", "kicks", "foot", "feet", "step", "steps"]),
-    ("🧥", ["jacket", "coat", "hoodie", "sweater", "shirt"]),
-    
+
     # 5. Chest, Heart & Physical Sensations
-    ("💓", ["chest", "heartbeat", "pulse", "breath", "breathe", "breathing", "alive", "flutter", "pounding"]),
-    ("❤️", ["love", "loved", "loving", "lover", "darling", "sweetheart", "romance", "romantic", "adore", "beloved"]),
-    ("💖", ["passion", "desire", "crush", "devotion", "fond", "infatuation", "sweet"]),
+    ("❤️", ["chest", "heart", "heartbeat", "pulse", "breath", "breathe", "breathing", "alive", "flutter", "pounding", "love", "loved", "loving", "lover", "darling", "sweetheart", "romance", "romantic", "adore", "beloved", "together"]),
     ("💘", ["cupid", "arrow", "smitten", "lovesick", "fallen"]),
     ("💋", ["kiss", "kisses", "kissing", "kissed", "lips", "lipstick", "smooch"]),
     ("🌹", ["rose", "roses", "petal", "petals", "bouquet", "flower", "flowers", "bloom"]),
     ("💌", ["letter", "letters", "postcard", "note", "envelope", "written"]),
     ("💍", ["marry", "wedding", "proposal", "engaged", "bride", "groom", "vows"]),
-    
+
     # 6. Heartbreak, Sadness, Crying & Scars
     ("💔", ["heartbreak", "heartbroken", "apart", "broken", "shattered", "break", "broke"]),
-    ("🥀", ["wither", "wilted", "faded", "dying", "decay", "forsaken", "abandoned", "destiny", "fate"]),
-    ("😭", ["cry", "crying", "cried", "tears", "weep", "weeping", "sob", "sobbing"]),
-    ("🥺", ["please", "begging", "sorry", "forgive", "pardon", "plead", "miss", "missing"]),
-    ("🩹", ["heal", "healing", "hurt", "hurting", "pain", "bruise", "bruised", "ache", "scars", "scarred"]),
-    ("🖤", ["lonely", "alone", "cold", "empty", "emptiness", "sorrow", "regret", "darkness", "victim", "victims"]),
-    
+    ("🥀", ["wither", "wilted", "faded", "dying", "decay", "forsaken", "abandoned"]),
+    ("🌧️", ["cry", "crying", "cried", "tears", "weep", "weeping", "sob", "sobbing", "rain", "raining", "rainy", "storm", "pour", "pouring", "wet", "puddle", "drizzle"]),
+    ("❄️", ["lonely", "alone", "cold", "empty", "emptiness", "sorrow", "regret", "snow", "ice", "icy", "frozen", "freeze", "chilly", "frost"]),
+
     # 7. Nightlife, Dancing & Party
-    ("🪩", ["disco", "party", "club", "groove", "groovin", "floor", "mirrors", "boogie", "discothèque", "discotheque"]),
+    ("🪩", ["disco", "party", "club", "groove", "groovin", "floor", "mirrors", "boogie", "discothque", "discotheque"]),
     ("💃", ["dance", "dancing", "danced", "dancer", "dancers", "waltz", "salsa"]),
     ("🎉", ["celebrate", "celebration", "confetti", "cheer", "cheers", "jubilee"]),
     ("🍾", ["champagne", "popping", "bottle", "bottles", "cork", "sparkling"]),
-    ("🥂", ["toast", "glasses", "cheers", "clink"]),
-    ("🍷", ["wine", "merlot", "cabernet", "sip", "sipping", "glass"]),
-    ("🍸", ["cocktail", "martini", "liquor", "vodka", "gin", "drink", "drinking", "drinks", "drunk", "wasted", "tipsy"]),
-    ("🍺", ["beer", "brew", "pub", "bar", "ale", "lager"]),
-    
+    ("🥂", ["toast", "glasses", "cheers", "clink", "drink", "drinks", "drunk", "wasted", "tipsy"]),
+
     # 8. Music, Instruments & Audio
     ("🎸", ["guitar", "riff", "chords", "strum", "strumming", "bass", "fender", "gibson", "acoustic", "electric"]),
     ("🎹", ["piano", "keys", "keyboard", "melody", "synth", "synthesizer"]),
     ("🥁", ["drum", "drums", "drummer", "snare", "cymbal", "percussion"]),
     ("🎷", ["sax", "saxophone", "jazz", "brass"]),
-    ("🎺", ["trumpet", "horn", "fanfare", "brass"]),
-    ("🎻", ["violin", "fiddle", "strings", "orchestra", "cello"]),
+    ("🎺", ["trumpet", "horn", "fanfare"]),
     ("🎤", ["sing", "singing", "sang", "singer", "vocal", "vocals", "mic", "microphone", "rap", "rapping", "rapper", "verse", "chorus"]),
-    ("🎧", ["headphones", "headset", "listen", "listening", "stereo", "audio"]),
-    ("🔔", ["bell", "bells", "chime", "chimes", "alarm"]),
-    
+    ("🔔", ["bell", "bells", "chime", "chimes", "alarm", "ring"]),
+
     # 9. Energy, Fire, Lightning & Power
     ("🔥", ["fire", "flame", "flames", "burn", "burning", "burned", "blaze", "blazing", "hot", "heat", "ignite"]),
     ("⚡", ["lightning", "electric", "electricity", "thunder", "shock", "voltage", "power", "flash", "spark", "energy", "physical", "chemical", "kryptonite"]),
-    ("👑", ["crown", "king", "queen", "prince", "princess", "royal", "royalty", "reign", "monarch", "throne"]),
     ("💎", ["diamond", "diamonds", "gem", "gems", "jewel", "jewels", "jewelry", "crystal", "precious"]),
-    ("💸", ["money", "cash", "dollars", "bills", "rich", "wealth", "wealthy", "fortune", "pay", "paid", "spend"]),
-    ("💰", ["gold", "bank", "treasure", "million", "billion", "racks"]),
-    ("🏆", ["trophy", "champ", "champion", "winner", "win", "winning", "victory"]),
-    ("🕶️", ["shades", "sunglasses", "cool", "swagger", "drip"]),
     ("🚀", ["rocket", "blast", "launch", "soar", "orbit", "liftoff"]),
-    ("💣", ["bomb", "dynamite", "explode", "explosion", "boom", "blast"]),
-    
+    ("💣", ["bomb", "dynamite", "explode", "explosion", "boom"]),
+
     # 10. Night, Space, Mystery & Cosmic
     ("🌙", ["moon", "luna", "night", "nighttime", "midnight", "crescent", "nocturnal"]),
     ("⭐", ["star", "stars", "starlight", "constellation", "shine", "shining", "glow", "glowing", "wish"]),
@@ -223,52 +297,30 @@ SEMANTIC_LEXICON = [
     ("☁️", ["cloud", "clouds", "cloudy", "haze", "mist", "fog"]),
     ("✨", ["sparkle", "sparkles", "magic", "magical", "glimmer", "shimmer", "radiant", "dazzle", "bound", "wonder"]),
     ("🕯️", ["candle", "wick", "wax", "lantern", "flame", "light"]),
-    ("💭", ["think", "thinking", "thought", "thoughts", "mind", "wonder", "wondering", "dream", "dreaming", "dreams", "remember"]),
-    ("🔮", ["destiny", "fate", "fortune", "future", "crystal", "prophecy"]),
-    ("🤷", ["know", "happened", "question", "how", "why"]),
-    
+    ("💭", ["think", "thinking", "thought", "thoughts", "mind", "wonder", "wondering", "dream", "dreaming", "dreams", "remember", "head", "heavy"]),
+    ("🔮", ["destiny", "fate", "fortune", "future", "prophecy"]),
+    ("❓", ["know", "happened", "question", "how", "why"]),
+
     # 11. Nature, Weather & Water
     ("🌊", ["wave", "waves", "ocean", "sea", "tide", "tides", "surf", "drown", "deep", "river", "shore", "beach"]),
     ("☀️", ["sun", "sunny", "sunshine", "daylight", "bright", "golden", "summer", "warmth"]),
-    ("🌧️", ["rain", "raining", "rainy", "storm", "pour", "pouring", "wet", "puddle", "drizzle"]),
-    ("⛈️", ["tempest", "hurricane", "tornado", "stormy"]),
-    ("❄️", ["snow", "snowing", "ice", "icy", "frozen", "freeze", "freezing", "winter", "chilly", "frost"]),
-    ("🌸", ["blossom", "cherry", "spring", "garden", "meadow", "petals"]),
-    ("🍁", ["autumn", "fall", "leaf", "leaves", "forest", "trees", "woods"]),
-    ("🌈", ["rainbow", "colors", "prism"]),
-    
+
     # 12. Speed, Driving, Travel & Escape
     ("🏎️", ["race", "racing", "speed", "fast", "ferrari", "porsche", "drift", "engine"]),
     ("🚗", ["car", "cars", "drive", "driving", "drove", "ride", "riding", "wheels", "traffic", "road", "street", "highway"]),
-    ("🏍️", ["motorcycle", "bike", "harley", "rider", "chopper"]),
-    ("✈️", ["plane", "airplane", "flight", "flying", "fly", "airport", "runway"]),
-    ("🏃", ["run", "running", "ran", "sprint", "chase", "chasing", "flee", "escape", "dare"]),
-    ("🛑", ["stop", "holding", "wait", "waiting", "pause", "enough", "stay"]),
-    
+    ("🏃", ["run", "running", "ran", "sprint", "chase", "chasing", "flee", "escape"]),
+
     # 13. Street, Danger & Edge
     ("💀", ["dead", "death", "die", "dying", "died", "skull", "skeleton", "morbid"]),
-    ("⚰️", ["coffin", "grave", "cemetery", "tomb", "buried", "funeral"]),
-    ("👻", ["ghost", "ghosts", "haunt", "haunted", "phantom", "spooky", "spirit"]),
-    ("🗡️", ["blade", "knife", "sword", "dagger", "stab", "cut", "wound", "sharp"]),
-    ("🔫", ["gun", "guns", "shot", "shoot", "shooting", "bullet", "bullets", "pistol", "trigger", "bang"]),
-    ("🐺", ["wolf", "wolves", "howl", "predator", "beast", "fangs", "wild"]),
-    ("🐍", ["snake", "snakes", "serpent", "poison", "venom", "viper"]),
-    
-    # 14. Communication & Voices
-    ("📱", ["phone", "cellphone", "mobile", "text", "calling", "screen", "dial", "call"]),
-    ("🗣️", ["said", "speak", "speaking", "spoke", "talk", "talking", "talked", "tell", "telling", "told", "shout", "whisper", "scream", "ooh", "hoo", "yeah", "woah"]),
-    ("☕", ["coffee", "tea", "latte", "espresso", "caffeine", "cup", "mug", "cafe"]),
-    ("🚬", ["smoke", "smoking", "cigarette", "cigar", "tobacco", "ashes", "inhale", "exhale"]),
-    ("💊", ["pill", "pills", "meds", "dose", "drugs", "cure", "remedy"]),
+    ("🛡️", ["shield", "armor", "guard", "protect", "safe"]),
+    ("🕊️", ["peace", "dove", "free", "freedom", "bird", "wings"]),
 ]
 
-# Build reverse keyword mapping
 KEYWORD_TO_EMOJI = {}
 for emoji, keywords in SEMANTIC_LEXICON:
     for kw in keywords:
         KEYWORD_TO_EMOJI[kw.lower()] = emoji
 
-# Disambiguation filters
 DISAMBIGUATION_BLACKLIST = {
     "fast": "🍔",
     "play": "🎮",
@@ -279,40 +331,72 @@ DISAMBIGUATION_BLACKLIST = {
     "bag": "💰",
 }
 
-# Dynamic rotating fallback palette for generic lyrics (ensures NEVER repeating identical icon 10x!)
-FALLBACK_PALETTE = ["✨", "🎶", "💫", "🌟", "💭", "💖", "🎵", "🕊️"]
+# High-contrast 1-bit vetted fallback palette
+FALLBACK_PALETTE = ["✨", "🎵", "⭐", "⚡", "❤️", "🌙", "🎶", "🕊️"]
 
-def analyze_lyric_semantics(line_text, focal_word=""):
+def analyze_lyric_multi_emoji(line_text, focal_word=""):
     """
-    Analyzes a lyrical sentence and returns the most evocative, contextually
-    appropriate Unicode emoji.
+    Extracts up to 2 distinct, highly contextual vetted monochrome emojis
+    with dynamic repetition cycling.
+    Returns:
+        List of tuples: [(emoji1, motion1), (emoji2, motion2)] or [(emoji1, motion1)]
     """
     if not line_text or not line_text.strip():
-        return "✨", 0
+        return [("✨", MOTION_FLOAT)]
 
     clean_text = line_text.lower().strip()
     words = [re.sub(r'[^\w]', '', w).lower() for w in clean_text.split() if w]
 
-    # 1. Multi-word Idioms & Phrases (Top Priority)
-    for idiom, emoji in LYRIC_IDIOMS:
-        if idiom in clean_text:
-            return emoji, 0
+    # 1. Repetition Cycling for Refrains / Choruses
+    for phrase, variations in REPETITION_VARIATIONS.items():
+        if phrase in clean_text:
+            idx = LINE_REPETITION_TRACKER.get(phrase, 0)
+            LINE_REPETITION_TRACKER[phrase] = idx + 1
+            return variations[idx % len(variations)]
 
-    # 2. Hero Focal Word Semantic Direct Match
+    detected_emojis = []
+
+    # 2. Multi-word Idioms & Phrases
+    remainder_text = clean_text
+    for idiom, emoji in LYRIC_IDIOMS:
+        if idiom in remainder_text:
+            m = get_motion_for_emoji(emoji)
+            if (emoji, m) not in detected_emojis:
+                detected_emojis.append((emoji, m))
+                remainder_text = remainder_text.replace(idiom, " ")
+            if len(detected_emojis) >= 2:
+                return detected_emojis
+
+    # 3. Focal Word Analysis
     if focal_word:
         clean_focal = re.sub(r'[^\w]', '', focal_word).lower()
         if clean_focal in KEYWORD_TO_EMOJI:
-            return KEYWORD_TO_EMOJI[clean_focal], 0
+            em = KEYWORD_TO_EMOJI[clean_focal]
+            m = get_motion_for_emoji(em)
+            if (em, m) not in detected_emojis:
+                detected_emojis.append((em, m))
+            if len(detected_emojis) >= 2:
+                return detected_emojis
 
-    # 3. Word-by-Word Scanning with Disambiguation Guardrails
-    for w in words:
+    # 4. Secondary Keyword Scan on Remaining Words
+    rem_words = [re.sub(r'[^\w]', '', w).lower() for w in remainder_text.split() if w]
+    for w in rem_words:
         if w in KEYWORD_TO_EMOJI:
-            emoji = KEYWORD_TO_EMOJI[w]
-            if w in DISAMBIGUATION_BLACKLIST and DISAMBIGUATION_BLACKLIST[w] == emoji:
+            em = KEYWORD_TO_EMOJI[w]
+            if w in DISAMBIGUATION_BLACKLIST and DISAMBIGUATION_BLACKLIST[w] == em:
                 continue
-            return emoji, 0
+            m = get_motion_for_emoji(em)
+            if (em, m) not in detected_emojis:
+                detected_emojis.append((em, m))
+            if len(detected_emojis) >= 2:
+                return detected_emojis
 
-    # 4. Sentiment & Valence Fallback
+    # 5. Single match found -> Check if we can pair with an evocative secondary
+    if len(detected_emojis) == 1:
+        # If primary is heart or dance, we can leave as 1 hero or pair with sparkle
+        return detected_emojis
+
+    # 6. Sentiment / Valence Fallback
     joy_stems = {"good", "great", "better", "alive", "free", "beautiful", "high", "bright", "together", "smile", "happy", "sun"}
     sad_stems = {"never", "nowhere", "hard", "dark", "heavy", "trouble", "tired", "fall", "down", "lost", "nobody", "wrong", "sorry"}
     love_stems = {"baby", "babe", "girl", "boy", "forever", "sweet", "touch", "feel", "closer", "stay", "us", "mine"}
@@ -320,15 +404,24 @@ def analyze_lyric_semantics(line_text, focal_word=""):
 
     word_set = set(words)
     if word_set & joy_stems:
-        return "✨", 0
+        return [("✨", MOTION_FLOAT)]
     if word_set & sad_stems:
-        return "🌧️", 0
+        return [("🌧️", MOTION_FLOAT)]
     if word_set & love_stems:
-        return "💖", 0
+        return [("❤️", MOTION_HEARTBEAT)]
     if word_set & hype_stems:
-        return "⚡", 0
+        return [("⚡", MOTION_FIRE)]
 
-    # 5. Smart Non-Repeating Fallback Palette (Cycles dynamically based on line hash)
+    # 7. Non-Repeating Dynamic Fallback Palette
     line_hash = abs(hash(clean_text))
-    fallback_emoji = FALLBACK_PALETTE[line_hash % len(FALLBACK_PALETTE)]
-    return fallback_emoji, 0
+    em = FALLBACK_PALETTE[line_hash % len(FALLBACK_PALETTE)]
+    return [(em, get_motion_for_emoji(em))]
+
+def analyze_lyric_semantics(line_text, focal_word=""):
+    """
+    Backward-compatible single emoji extractor.
+    """
+    multi = analyze_lyric_multi_emoji(line_text, focal_word=focal_word)
+    if multi:
+        return multi[0]
+    return "✨", MOTION_FLOAT

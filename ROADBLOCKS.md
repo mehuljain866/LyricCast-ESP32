@@ -174,3 +174,24 @@
     - `WIGGLE` (3): High-frequency rapid tremor for fire, rock, and hype lyrics.
     - `SPARKLE` (4): Orbital micro-sparkle stars revolving around the emoji.
   - Implemented **Adaptive On-Screen Positioning**: dynamically positions emojis beside the focal word, floating above wide focal words, or centered, guaranteeing emojis are **never dropped or clipped**.
+
+---
+
+### Roadblock 6.5: Lyric Text Truncation, 1-Bit Monochrome Legibility & Generic Emoji Bobbing
+* **The Symptom:** 
+  1. Wide lyric lines exceeded the 128px screen width and were getting cut off or forced into tiny, squashed fonts.
+  2. Color-dependent or complex emojis (like 🛑 red stop sign, 🤷 shrug, 💑 couple kissing) turned into illegible, noisy blobs when thresholded to 16×16 1-bit monochrome.
+  3. Repeated choruses repeatedly rendered the exact same emoji over and over.
+  4. Emotional emojis (such as a beating heart ❤️) merely bobbed up and down generically rather than actually beating or throbbing.
+  5. Only 1 emoji could be displayed per line, stuck in a rigid column.
+* **The Root Cause:**
+  1. 128×64 physical OLED screen dimensions are constrained; without a panning camera, long lines cannot fit without font degradation.
+  2. Certain Unicode emojis depend strictly on color or intricate detail that fails in 1-bit monochrome 16×16 bitmaps.
+  3. Lack of repetition tracking across chorus refrains.
+  4. Firmware lacked dynamic pixel scaling for genuine anatomical `lub-dub` pulse animations.
+* **The Solution:**
+  1. **Virtual Camera Pan Engine**: Firmware calculates total scene content width $W_{\text{total}}$. When $W_{\text{total}} > 120\text{px}$, the virtual camera smoothly pans horizontally across the line from left to right as playback progresses ($0.15 \to 0.85$ progress) using `easeInOutQuad`. 100% of lyric words remain visible with zero font scaling or truncation.
+  2. **1-Bit Curated Monochrome Whitelist**: Replaced all low-contrast/color-dependent emojis with crisp silhouettes (e.g. 🛑 $\to$ ✋, 🤷 $\to$ ❓, 💑 $\to$ ❤️). Handcrafted a pixel-perfect 16×16 solid beating heart bitmap.
+  3. **Repetition Cycling**: Added song refrain repetition tracker that alternates complementary emoji pairs across repeated choruses (e.g. Chorus 1: 🪩+💃, Chorus 2: 💃+⚡, Chorus 3: 🪩+✨).
+  4. **Dynamic Scaler & Authentic Kinetic Motions**: Implemented real-time dynamic scaling in firmware to render genuine double-beat `lub-dub` heartbeat throbs ($0.85 \leftrightarrow 1.25\times$), flame chaotic jitter, and rhythmic dance sways.
+  5. **Multi-Emoji Streaming**: Extended serial protocol (`BMP:<hex1>,<hex2>`) to stream up to 2 emojis per line revealed dynamically across the panning camera.

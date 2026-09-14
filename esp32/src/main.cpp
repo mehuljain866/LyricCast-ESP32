@@ -924,7 +924,11 @@ struct SketchScene {
   int fontPreset = 0;
   int fxFlags = 0;
   bool hasBitmap = false;
+  uint8_t emojiCount = 0;
   uint8_t bitmapData[32];
+  uint8_t bitmapData2[32];
+  uint8_t motionType1 = 0;
+  uint8_t motionType2 = 0;
 };
 
 SketchScene currentSketch;
@@ -1251,27 +1255,94 @@ void drawParticles() {
 // KINETIC EMOJI MOTION ENGINE (Expressive++ Mode)
 // Smooth, organic vertical wiggle / bobbing up and down
 // ==========================================
-void drawKineticEmoji(const uint8_t* bitmap, int anchorX, int anchorY, float progress, unsigned long now) {
+// ==========================================
+// KINETIC EMOJI MOTION & DYNAMIC SCALER (Expressive++ Mode)
+// Supports Authentic Heartbeat Pulse (lub-dub), Fire Jitter, Dance Sway, Pop
+// ==========================================
+void drawScaledBitmap16(int x, int y, const uint8_t* bitmap, float scale) {
   if (!bitmap) return;
-  
-  // Smooth, gentle vertical wiggle / bobbing (natural breathing frequency)
-  int bobY = (int)(sin(now * 0.007f) * 2.5f);
-  int drawY = anchorY + bobY;
-
-  if (drawY >= -15 && drawY <= 46) {
-    display.drawBitmap(anchorX, drawY, bitmap, 16, 16, SSD1306_WHITE);
+  if (scale >= 0.95f && scale <= 1.05f) {
+    if (x >= -15 && x <= 127 && y >= -15 && y <= 63) {
+      display.drawBitmap(x, y, bitmap, 16, 16, SSD1306_WHITE);
+    }
+    return;
+  }
+  int w = (int)(16.0f * scale + 0.5f);
+  int h = (int)(16.0f * scale + 0.5f);
+  if (w < 4) w = 4;
+  if (h < 4) h = 4;
+  int ox = x + (16 - w) / 2;
+  int oy = y + (16 - h) / 2;
+  for (int py = 0; py < h; py++) {
+    int sy = (py * 16) / h;
+    int dy = oy + py;
+    if (dy < 0 || dy >= 48) continue; // Blue zone rows 0..47
+    for (int px = 0; px < w; px++) {
+      int sx = (px * 16) / w;
+      int dx = ox + px;
+      if (dx < 0 || dx >= 128) continue;
+      uint8_t b = bitmap[sy * 2 + (sx / 8)];
+      if (b & (0x80 >> (sx % 8))) {
+        display.drawPixel(dx, dy, SSD1306_WHITE);
+      }
+    }
   }
 }
 
+void drawKineticEmojiScaled(const uint8_t* bitmap, int anchorX, int anchorY, uint8_t motionType, float progress, unsigned long now) {
+  if (!bitmap) return;
+
+  int drawX = anchorX;
+  int drawY = anchorY;
+  float scale = 1.0f;
+
+  switch (motionType) {
+    case 1: { // MOTION_HEARTBEAT: Authentic lub-dub double-beat pulse
+      float t = (float)(now % 800) / 800.0f; // 800ms cycle (~75 BPM)
+      if (t < 0.12f) {
+        scale = 1.0f + 0.25f * sin((t / 0.12f) * 3.14159f); // Lub: 1.25x
+      } else if (t >= 0.18f && t < 0.28f) {
+        scale = 1.0f + 0.18f * sin(((t - 0.18f) / 0.10f) * 3.14159f); // Dub: 1.18x
+      } else {
+        scale = 1.0f;
+      }
+      break;
+    }
+    case 2: { // MOTION_FIRE: Rapid chaotic jitter & flicker
+      int jx = ((now / 35) % 3) - 1;
+      int jy = (((now / 35) * 7) % 3) - 1;
+      drawX += jx;
+      drawY += jy;
+      break;
+    }
+    case 3: { // MOTION_DANCE: Rhythmic sway and bounce
+      drawX += (int)(sin(now * 0.008f) * 3.0f);
+      drawY += (int)(abs(sin(now * 0.016f)) * -3.0f);
+      break;
+    }
+    case 4: { // MOTION_POP: Elastic entrance pop
+      if (progress < 0.35f) {
+        float p = progress / 0.35f;
+        scale = easeOutBounce(p);
+        if (scale < 0.2f) scale = 0.2f;
+      }
+      break;
+    }
+    default: { // MOTION_FLOAT: Gentle sinusoidal float
+      drawY += (int)(sin(now * 0.006f) * 2.5f);
+      break;
+    }
+  }
+
+  drawScaledBitmap16(drawX, drawY, bitmap, scale);
+}
+
 // ==========================================
-// RENDER SINGLE SKETCH SCENE (Strict 128x48 Pixel Geometry with Offset)
+// RENDER SINGLE SKETCH SCENE (Virtual Camera Pan Engine)
+// Zero Text Clipping, Large Typography, Multi-Emoji Support
 // ==========================================
 void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, unsigned long now) {
   if (s.focalWord.length() == 0 && s.prefix.length() == 0 && s.suffix.length() == 0) return;
-
-  int minX = 2;
-  int availWidth = s.hasBitmap ? 104 : 124;
-  int maxX = s.hasBitmap ? 106 : 126;
 
   bool hasPrefix = (s.prefix.length() > 0);
   bool hasFocal = (s.focalWord.length() > 0);
@@ -1279,23 +1350,19 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
   String comp = s.composition;
   if (comp == "MONOLITH" && (hasPrefix || hasSuffix)) comp = "CENTER";
 
-  // Strict 128x48 Blue Zone Vertical Alignment (Natural, cohesive line heights)
+  // Vertical Blue Zone Layout
   int prefixY = 11 + yOffset;
   int focalY = 26 + yOffset;
   int suffixY = 41 + yOffset;
 
   if (hasPrefix && hasFocal && hasSuffix) {
-    prefixY = 11 + yOffset;
-    focalY = 26 + yOffset;
-    suffixY = 41 + yOffset;
+    prefixY = 11 + yOffset; focalY = 26 + yOffset; suffixY = 41 + yOffset;
   } else if (hasPrefix && hasFocal && !hasSuffix) {
-    prefixY = 17 + yOffset;
-    focalY = 34 + yOffset;
+    prefixY = 17 + yOffset; focalY = 34 + yOffset;
   } else if (!hasPrefix && hasFocal && hasSuffix) {
-    focalY = 17 + yOffset;
-    suffixY = 34 + yOffset;
+    focalY = 17 + yOffset; suffixY = 34 + yOffset;
   } else if (!hasPrefix && hasFocal && !hasSuffix) {
-    focalY = 28 + yOffset; // Perfectly centered vertically!
+    focalY = 28 + yOffset;
   }
 
   float breathe = sin(now * 0.006f) * 1.0f;
@@ -1307,29 +1374,18 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     focalY += (int)breathe;
   }
 
-  if (s.fxFlags & 2) {
-    drawCornerFrames(progress);
-  }
-
-  if (s.fxFlags & 4) {
-    int barH = (int)(min(1.0f, progress * 2.0f) * 34.0f);
-    display.fillRect(2, 4 + yOffset, 2, barH, SSD1306_WHITE);
-    minX = 7;
-    availWidth = 119;
-  }
-
-  // Font Preset Selection (Locked per-song, 100% unified font family across all 3 segments!)
+  // Choose Font Preset (Unified font family per song)
   int prefixFont = 3, focalFont = 0, suffixFont = 3;
   if (currentFontStyle == FONT_ANIMATED || currentFontStyle == FONT_MIX) {
     switch (s.fontPreset % 8) {
-      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;  // Unified Cursive Script (FreeSerifItalic9 + FreeSerifBoldItalic12 + FreeSerifItalic9)
-      case 1: prefixFont = 4; focalFont = 1; suffixFont = 4; break;  // Unified Modern Sans (FreeSans9 + FreeSansBold12 + FreeSans9)
-      case 2: prefixFont = 3; focalFont = 2; suffixFont = 3; break;  // Unified Editorial Serif (FreeSerifItalic9 + FreeSerifBold12 + FreeSerifItalic9)
-      case 3: prefixFont = 9; focalFont = 14; suffixFont = 9; break; // Unified Monospace (FreeMono9 + FreeMonoBold12 + FreeMono9)
-      case 4: prefixFont = 7; focalFont = 1; suffixFont = 7; break;  // Unified Bold Sans Display (FreeSansBold9 + FreeSansBold12 + FreeSansBold9)
-      case 5: prefixFont = 3; focalFont = 11; suffixFont = 3; break; // Unified Soft Italic Script (FreeSerifItalic9 + FreeSerifItalic12 + FreeSerifItalic9)
-      case 6: prefixFont = 5; focalFont = 14; suffixFont = 5; break; // Unified Heavy Mono/Arcade (FreeMonoBold9 + FreeMonoBold12 + FreeMonoBold9)
-      case 7: prefixFont = 4; focalFont = 10; suffixFont = 4; break; // Unified Clean Sans Regular (FreeSans9 + FreeSans12 + FreeSans9)
+      case 0: prefixFont = 3; focalFont = 0; suffixFont = 3; break;
+      case 1: prefixFont = 4; focalFont = 1; suffixFont = 4; break;
+      case 2: prefixFont = 3; focalFont = 2; suffixFont = 3; break;
+      case 3: prefixFont = 9; focalFont = 14; suffixFont = 9; break;
+      case 4: prefixFont = 7; focalFont = 1; suffixFont = 7; break;
+      case 5: prefixFont = 3; focalFont = 11; suffixFont = 3; break;
+      case 6: prefixFont = 5; focalFont = 14; suffixFont = 5; break;
+      case 7: prefixFont = 4; focalFont = 10; suffixFont = 4; break;
     }
   } else if (currentFontStyle == FONT_SANS) {
     prefixFont = 4; focalFont = 1; suffixFont = 4;
@@ -1346,146 +1402,151 @@ void drawSingleSketchScene(const SketchScene& s, int yOffset, float progress, un
     display.setFont(&FreeSansBold18pt7b);
     int16_t x1, y1; uint16_t fw, fh;
     display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
-    if (fw > availWidth) {
+    focalFont = 12;
+    if (fw > 120) {
       focalFont = 1;
       display.setFont(&FreeSansBold12pt7b);
       display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
-      if (fw > availWidth) {
-        focalFont = 7;
-        display.setFont(&FreeSansBold9pt7b);
-        display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
-      }
     }
-    int fx = minX + (availWidth - (int)fw) / 2;
-    if (fx + fw > maxX) fx = max(minX, maxX - (int)fw);
-    if (fx < minX) fx = minX;
+    int totalSceneW = (int)fw + (s.hasBitmap ? (s.emojiCount * 22) : 0);
+    int cameraX = 0;
+    int fx = 4;
+    int emojiX = fx + (int)fw + 6;
+    if (totalSceneW <= 124) {
+      fx = (128 - totalSceneW) / 2;
+      emojiX = fx + (int)fw + 6;
+    } else {
+      int maxScroll = totalSceneW - 116;
+      float panProgress = (progress <= 0.15f) ? 0.0f : ((progress >= 0.85f) ? 1.0f : easeInOutQuad((progress - 0.15f) / 0.70f));
+      cameraX = (int)(maxScroll * panProgress);
+    }
     int fy = 29 + yOffset + (int)breathe;
     if (fy >= -10 && fy <= 55) {
-      drawProgressiveText(s.focalWord, fx, fy, focalFont, progress);
-      if (s.underline) drawProgressiveUnderline(fx - 2, fx + fw + 2, fy + 3, progress);
-      if (s.doodle != "NONE" && !s.hasBitmap && fx + fw + 14 <= maxX) {
-        drawDoodle(s.doodle, min(maxX - 6, fx + fw + 8), fy - 6, progress, now);
+      drawProgressiveText(s.focalWord, fx - cameraX, fy, focalFont, progress);
+      if (s.underline) drawProgressiveUnderline(fx - cameraX - 2, fx - cameraX + fw + 2, fy + 3, progress);
+      if (s.doodle != "NONE" && !s.hasBitmap) {
+        drawDoodle(s.doodle, fx - cameraX + fw + 8, fy - 6, progress, now);
       }
     }
-    if (s.hasBitmap) {
-      drawKineticEmoji(s.bitmapData, 110, 16 + yOffset, progress, now);
+    if (s.hasBitmap && s.emojiCount >= 1) {
+      drawKineticEmojiScaled(s.bitmapData, emojiX - cameraX, 16 + yOffset, s.motionType1, progress, now);
     }
     return;
   }
 
-  // 2. Draw Prefix
-  if (hasPrefix && prefixY >= -10 && prefixY <= 55) {
-    const GFXfont* pFont = getFontByChoice(prefixFont);
-    display.setFont(pFont);
-    int16_t x1, y1; uint16_t pw, ph;
+  // 2. Measure natural, uncompromised widths
+  int16_t x1, y1;
+  uint16_t pw = 0, ph = 0, fw = 0, fh = 0, sw = 0, sh = 0;
+  if (hasPrefix) {
+    display.setFont(getFontByChoice(prefixFont));
     display.getTextBounds(s.prefix, 0, 0, &x1, &y1, &pw, &ph);
-    if (pw > availWidth) {
-      prefixFont = 4;
-      pFont = getFontByChoice(prefixFont);
-      display.setFont(pFont);
-      display.getTextBounds(s.prefix, 0, 0, &x1, &y1, &pw, &ph);
-      if (pw > availWidth) {
-        prefixFont = -1;
-        display.setFont(NULL);
-        pw = s.prefix.length() * 6;
-      }
+  }
+  if (hasFocal) {
+    display.setFont(getFontByChoice(focalFont));
+    display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
+  }
+  if (hasSuffix) {
+    display.setFont(getFontByChoice(suffixFont));
+    display.getTextBounds(s.suffix, 0, 0, &x1, &y1, &sw, &sh);
+  }
+
+  // 3. Virtual Canvas Layout
+  int textMaxW = max((int)pw, max((int)fw, (int)sw));
+  int textStartX = 4;
+  int emoji1X = 0, emoji1Y = 16 + yOffset;
+  int emoji2X = 0, emoji2Y = 16 + yOffset;
+  int totalSceneW = 0;
+
+  if (s.hasBitmap && s.emojiCount == 2) {
+    emoji1X = 2;
+    textStartX = 22;
+    emoji2X = textStartX + textMaxW + 6;
+    totalSceneW = emoji2X + 18;
+  } else if (s.hasBitmap && s.emojiCount == 1) {
+    textStartX = 4;
+    emoji1X = textStartX + textMaxW + 6;
+    totalSceneW = emoji1X + 18;
+  } else {
+    textStartX = 4;
+    totalSceneW = textMaxW + 8;
+  }
+
+  // 4. Virtual Camera Pan Controller
+  int cameraX = 0;
+  if (totalSceneW <= 124) {
+    // Short line: Centered on screen
+    int extra = (128 - totalSceneW) / 2;
+    textStartX += extra;
+    emoji1X += extra;
+    emoji2X += extra;
+    cameraX = 0;
+  } else {
+    // Wide line: Pan camera smoothly from 0 to totalSceneW - 116
+    int maxScroll = totalSceneW - 116;
+    float panProgress = 0.0f;
+    if (progress <= 0.15f) {
+      panProgress = 0.0f;
+    } else if (progress >= 0.85f) {
+      panProgress = 1.0f;
+    } else {
+      float u = (progress - 0.15f) / 0.70f;
+      panProgress = easeInOutQuad(u);
     }
-    int px = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)pw) / 2;
-    if (px + pw > maxX) px = max(minX, maxX - (int)pw);
-    if (px < minX) px = minX;
+    cameraX = (int)(maxScroll * panProgress);
+  }
+
+  // 5. Draw Visual Effects
+  if (s.fxFlags & 2) {
+    drawCornerFrames(progress);
+  }
+  if (s.fxFlags & 4) {
+    int barH = (int)(min(1.0f, progress * 2.0f) * 34.0f);
+    display.fillRect(2, 4 + yOffset, 2, barH, SSD1306_WHITE);
+  }
+
+  // 6. Draw Prefix
+  if (hasPrefix && prefixY >= -10 && prefixY <= 55) {
+    int px = textStartX + (comp == "STACKED" ? 0 : (textMaxW - (int)pw) / 2) - cameraX;
     drawProgressiveText(s.prefix, px, prefixY, prefixFont, progress);
   }
 
-  // 3. Draw Focal Word
+  // 7. Draw Focal Word
   if (hasFocal && focalY >= -10 && focalY <= 55) {
-    const GFXfont* fFont = getFontByChoice(focalFont);
-    display.setFont(fFont);
-    int16_t x1, y1; uint16_t fw, fh;
-    display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
-    if (fw > availWidth) {
-      focalFont = (focalFont == 1 || focalFont == 10) ? 7 : 3;
-      fFont = getFontByChoice(focalFont);
-      display.setFont(fFont);
-      display.getTextBounds(s.focalWord, 0, 0, &x1, &y1, &fw, &fh);
-      if (fw > availWidth) {
-        focalFont = -1;
-        display.setFont(NULL);
-        fw = s.focalWord.length() * 6;
-      }
-    }
-    int fx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)fw) / 2;
-    if (fx + fw > maxX) fx = max(minX, maxX - (int)fw);
-    if (fx < minX) fx = minX;
-
+    int fx = textStartX + (comp == "STACKED" ? 0 : (textMaxW - (int)fw) / 2) - cameraX;
     if (s.fxFlags & 1) {
-      int16_t bx, by; uint16_t bw, bh;
-      if (focalFont >= 0) display.getTextBounds(s.focalWord, fx, focalY, &bx, &by, &bw, &bh);
-      else { bx = fx; by = focalY - 8; bw = fw; bh = 9; }
-      int rx = max(0, bx - 3);
-      int ry = max(0, by - 1);
-      int rw = min(maxX - rx, bw + 6);
-      int rh = min(47 - ry, bh + 3);
-      if (hasPrefix && ry < prefixY + 2) ry = prefixY + 2;
-      if (hasSuffix && ry + rh > suffixY - 8) rh = max(6, (suffixY - 8) - ry);
-      if (ry < 48 && ry + rh > 0) {
-        display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
-        display.setTextColor(SSD1306_BLACK);
-        drawProgressiveText(s.focalWord, fx, focalY, focalFont, progress);
-        display.setTextColor(SSD1306_WHITE);
-      }
+      int rx = max(0, fx - 3);
+      int ry = max(0, focalY - (int)fh - 1);
+      int rw = (int)fw + 6;
+      int rh = (int)fh + 4;
+      display.fillRect(rx, ry, rw, rh, SSD1306_WHITE);
+      display.setTextColor(SSD1306_BLACK);
+      drawProgressiveText(s.focalWord, fx, focalY, focalFont, progress);
+      display.setTextColor(SSD1306_WHITE);
     } else {
       drawProgressiveText(s.focalWord, fx, focalY, focalFont, progress);
     }
 
     if (s.underline && !(s.fxFlags & 1)) {
-      int ux1 = max(minX, fx - 2);
-      int ux2 = min(maxX, fx + (int)fw + 2);
-      drawProgressiveUnderline(ux1, ux2, min(45, focalY + 3), progress);
+      drawProgressiveUnderline(fx - 2, fx + fw + 2, min(45, focalY + 3), progress);
     }
 
-    if (s.doodle == "CIRCLE") {
-      drawProgressiveCircle(fx + fw/2, focalY - fh/2, min(24, (int)fw/2 + 4), min(12, (int)fh/2 + 3), progress);
-    } else if (s.doodle == "BOX") {
-      int bx1 = max(minX, fx - 4), bx2 = min(maxX, fx + (int)fw + 4);
-      drawProgressiveBox(bx1, max(1, focalY - (int)fh - 1), bx2, min(45, focalY + 3), progress);
-    } else if (s.doodle == "BUBBLE") {
-      drawProgressiveBubble(fx + fw/2, focalY - fh/2, min(26, (int)fw/2 + 6), min(14, (int)fh/2 + 4), progress);
-    } else if (s.doodle == "WAVE") {
-      drawProgressiveWave(minX, minX + availWidth, 44 + yOffset, progress, now);
-    } else if (s.doodle != "NONE" && s.doodle != "UNDERLINE" && !s.hasBitmap) {
-      int dx = fx + fw + 6;
-      int dy = focalY - 5;
-      if (dx + 12 > maxX) dx = max(minX, fx - 14);
-      drawDoodle(s.doodle, dx, dy, progress, now);
+    if (!s.hasBitmap && s.doodle != "NONE") {
+      drawDoodle(s.doodle, fx + fw + 6, focalY - 5, progress, now);
     }
   }
 
-  // 4. Draw Suffix
+  // 8. Draw Suffix
   if (hasSuffix && suffixY >= -10 && suffixY <= 55) {
-    const GFXfont* sFont = getFontByChoice(suffixFont);
-    display.setFont(sFont);
-    int16_t x1, y1; uint16_t sw, sh;
-    display.getTextBounds(s.suffix, 0, 0, &x1, &y1, &sw, &sh);
-    if (sw > availWidth) {
-      suffixFont = 4;
-      sFont = getFontByChoice(suffixFont);
-      display.setFont(sFont);
-      display.getTextBounds(s.suffix, 0, 0, &x1, &y1, &sw, &sh);
-      if (sw > availWidth) {
-        suffixFont = -1;
-        display.setFont(NULL);
-        sw = s.suffix.length() * 6;
-      }
-    }
-    int sx = (comp == "STACKED") ? minX + 2 : minX + (availWidth - (int)sw) / 2;
-    if (sx + sw > maxX) sx = max(minX, maxX - (int)sw);
-    if (sx < minX) sx = minX;
+    int sx = textStartX + (comp == "STACKED" ? 0 : (textMaxW - (int)sw) / 2) - cameraX;
     drawProgressiveText(s.suffix, sx, suffixY, suffixFont, progress);
   }
 
-  // Render Expressive++ Kinetic Emoji in dedicated column with zero text overlap
-  if (s.hasBitmap) {
-    drawKineticEmoji(s.bitmapData, 110, 16 + yOffset, progress, now);
+  // 9. Draw Kinetic Emojis (With Camera Pan Offset)
+  if (s.hasBitmap && s.emojiCount >= 1) {
+    drawKineticEmojiScaled(s.bitmapData, emoji1X - cameraX, emoji1Y, s.motionType1, progress, now);
+  }
+  if (s.hasBitmap && s.emojiCount >= 2) {
+    drawKineticEmojiScaled(s.bitmapData2, emoji2X - cameraX, emoji2Y, s.motionType2, progress, now);
   }
 }
 
@@ -1605,21 +1666,32 @@ void parseSerialData(String data) {
       
       if (newScene.doodle.startsWith("BMP:")) {
         newScene.hasBitmap = true;
-        String hex = newScene.doodle.substring(4);
-        int hexLen = hex.length();
-        for (int i = 0; i < 32 && (i * 2 + 1) < hexLen; i++) {
-          char c1 = hex.charAt(i * 2);
-          char c2 = hex.charAt(i * 2 + 1);
-          auto hexVal = [](char c) -> uint8_t {
-            if (c >= '0' && c <= '9') return c - '0';
-            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-            return 0;
-          };
-          newScene.bitmapData[i] = (hexVal(c1) << 4) | hexVal(c2);
+        String bmpPayload = newScene.doodle.substring(4);
+        int commaIdx = bmpPayload.indexOf(',');
+        String hex1 = (commaIdx >= 0) ? bmpPayload.substring(0, commaIdx) : bmpPayload;
+        String hex2 = (commaIdx >= 0) ? bmpPayload.substring(commaIdx + 1) : "";
+
+        auto hexVal = [](char c) -> uint8_t {
+          if (c >= '0' && c <= '9') return c - '0';
+          if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+          if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+          return 0;
+        };
+
+        for (int i = 0; i < 32 && (i * 2 + 1) < hex1.length(); i++) {
+          newScene.bitmapData[i] = (hexVal(hex1.charAt(i * 2)) << 4) | hexVal(hex1.charAt(i * 2 + 1));
+        }
+        newScene.emojiCount = 1;
+
+        if (hex2.length() >= 64) {
+          for (int i = 0; i < 32 && (i * 2 + 1) < hex2.length(); i++) {
+            newScene.bitmapData2[i] = (hexVal(hex2.charAt(i * 2)) << 4) | hexVal(hex2.charAt(i * 2 + 1));
+          }
+          newScene.emojiCount = 2;
         }
       } else {
         newScene.hasBitmap = false;
+        newScene.emojiCount = 0;
       }
       
       if (p9 > 0) {
@@ -1636,6 +1708,9 @@ void parseSerialData(String data) {
         newScene.fontPreset = 0;
         newScene.fxFlags = 0;
       }
+
+      newScene.motionType1 = (newScene.fxFlags >> 4) & 0x0F;
+      newScene.motionType2 = (newScene.fxFlags >> 8) & 0x0F;
       
       if (newScene.focalWord != currentSketch.focalWord || newScene.prefix != currentSketch.prefix || newScene.suffix != currentSketch.suffix || newScene.doodle != currentSketch.doodle) {
         oldSketch = currentSketch;

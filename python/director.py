@@ -121,6 +121,11 @@ class LyricDirector:
         self.song_history = []
         self.last_doodle = ""
         self.last_composition = ""
+        try:
+            from emoji_engine import reset_repetition_tracker
+            reset_repetition_tracker()
+        except Exception:
+            pass
         
         # Analyze track metadata to determine genre & energy profile
         track_meta = f"{song_title} {artist}".lower()
@@ -326,23 +331,38 @@ class LyricDirector:
         return scene
 
     def analyze_line_expressive(self, line_text, duration=2.5, song_position=0.0):
-        """Expressive++ Mode: Leverages context-aware semantic emoji engine and dynamic 16x16 rasterization."""
+        """Expressive++ Mode: Leverages context-aware semantic emoji engine, multi-emoji streaming, and kinetic motion."""
         scene = self.analyze_line(line_text, duration=duration, song_position=song_position)
         if scene.get("type") == "idle":
             return scene
 
         try:
-            from emoji_engine import analyze_lyric_semantics
+            from emoji_engine import analyze_lyric_multi_emoji
             from emoji_rasterizer import rasterize_emoji_16x16
 
             focal = scene.get("focal_word", "")
-            emoji, motion_type = analyze_lyric_semantics(line_text, focal_word=focal)
-            if emoji:
-                hex_str, _ = rasterize_emoji_16x16(emoji)
-                if hex_str:
-                    scene["emoji"] = emoji
-                    scene["emoji_motion"] = motion_type
-                    scene["doodle"] = f"BMP:{hex_str}"
+            emoji_pairs = analyze_lyric_multi_emoji(line_text, focal_word=focal)
+            if emoji_pairs:
+                hex_list = []
+                emojis_data = []
+                fx = scene.get("fx_flags", 0)
+
+                for idx, (em, m_type) in enumerate(emoji_pairs[:2]):
+                    hex_str, _ = rasterize_emoji_16x16(em)
+                    if hex_str:
+                        hex_list.append(hex_str)
+                        emojis_data.append({"emoji": em, "motion": m_type})
+                        if idx == 0:
+                            fx = (fx & ~0x00F0) | ((m_type & 0x0F) << 4)
+                        elif idx == 1:
+                            fx = (fx & ~0x0F00) | ((m_type & 0x0F) << 8)
+
+                if hex_list:
+                    scene["doodle"] = "BMP:" + ",".join(hex_list)
+                    scene["emoji"] = emojis_data[0]["emoji"]
+                    scene["emoji_motion"] = emojis_data[0]["motion"]
+                    scene["emojis"] = emojis_data
+                    scene["fx_flags"] = fx
         except Exception as e:
             print(f"[Director] Expressive emoji error: {e}")
 
